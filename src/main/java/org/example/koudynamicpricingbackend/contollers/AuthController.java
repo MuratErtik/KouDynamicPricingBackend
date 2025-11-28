@@ -43,6 +43,7 @@ public class AuthController {
 //        return ResponseEntity.ok(authService.refreshToken(request));
 //    }
 //
+     // it will be handled on frontend!!!
 //    @PostMapping("/logout")
 //    public ResponseEntity<String> logout(@RequestBody RefreshTokenRequest request) {
 //        authService.logout(request);
