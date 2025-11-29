@@ -8,6 +8,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 @RequiredArgsConstructor
 public class DatabaseSeeder implements CommandLineRunner {
@@ -20,15 +22,19 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (!userRepository.existsByUserRole(UserRole.ROLE_ADMIN)) {
 
             User admin = User.builder()
-                    .name("Super")
+                    .name("Süper")
                     .lastname("Admin")
                     .email("admin@kou.edu.tr")
                     .password(passwordEncoder.encode("admin123"))
                     .userRole(UserRole.ROLE_ADMIN)
+                    .mobileNo("5551112233")
+                    .createdAt(LocalDateTime.now())
+                    // ----------------------------
+
                     .build();
 
             userRepository.save(admin);
-            System.out.println("DEFAULT ADMIN has been created: admin@kou.edu.tr");
+            System.out.println("DEFAULT ADMIN has been created as seeder!");
         }
     }
 }
