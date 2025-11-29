@@ -91,13 +91,17 @@ public class AuthService {
 
     public AuthResponse signin(SigninRequest request) {
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+//        authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+//        );
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AuthException("User not found"));
 
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new AuthException("Invalid Password");
+        }
 
         String accessToken = jwtUtils.generateAccessToken(user.getEmail(), List.of(user.getUserRole().name()));
         String refreshToken = jwtUtils.generateRefreshToken(user.getEmail());
