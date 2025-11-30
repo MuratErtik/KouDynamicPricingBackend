@@ -50,4 +50,19 @@ public class GlobalException {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(AirportException.class)
+    public ResponseEntity<ErrorDetail> handleAirportException(AirportException ae, WebRequest request) {
+
+        ErrorDetail errorDetail = new ErrorDetail();
+
+        errorDetail.setTimestamp(LocalDateTime.now());
+
+        errorDetail.setError(ae.getMessage());
+
+        errorDetail.setDetails(request.getDescription(false));
+
+        return new ResponseEntity<>(errorDetail, HttpStatus.BAD_REQUEST);
+
+    }
+
 }
