@@ -19,8 +19,5 @@ public class CreateFlightRequest {
     @Future(message = "Departure time must be in the future")
     private LocalDateTime departureTime;
 
-    @NotNull(message = "Arrival time is required")
-    @Future(message = "Arrival time must be in the future")
-    private LocalDateTime arrivalTime;
 
 }
