@@ -46,7 +46,7 @@ public class Flight {
     private BigDecimal basePrice;
 
     @Column(name = "total_seats", nullable = false)
-    private Integer totalSeats;
+    private Integer totalSeats = 90;
 
     @Column(name = "remaining_seats", nullable = false)
     private Integer remainingSeats;
