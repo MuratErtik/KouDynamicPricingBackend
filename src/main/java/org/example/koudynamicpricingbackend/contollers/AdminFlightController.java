@@ -1,4 +1,4 @@
-package org.example.koudynamicpricingbackend.controllers;
+package org.example.koudynamicpricingbackend.contollers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
