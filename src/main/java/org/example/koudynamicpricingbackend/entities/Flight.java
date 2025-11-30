@@ -42,15 +42,12 @@ public class Flight {
 
     //-------------------
 
-    // Base price: dinamik fiyatlama için başlangıç fiyatı
     @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice;
 
-    // Toplam koltuk sayısı (ör: 180)
     @Column(name = "total_seats", nullable = false)
     private Integer totalSeats;
 
-    // Kalan koltuk (dinamik fiyat modelinde önemli)
     @Column(name = "remaining_seats", nullable = false)
     private Integer remainingSeats;
 
