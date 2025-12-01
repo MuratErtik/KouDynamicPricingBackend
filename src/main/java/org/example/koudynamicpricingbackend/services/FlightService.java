@@ -10,6 +10,7 @@ import org.example.koudynamicpricingbackend.entities.Airport;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.Seat;
 import org.example.koudynamicpricingbackend.exceptions.AirportException;
+import org.example.koudynamicpricingbackend.exceptions.FlightException;
 import org.example.koudynamicpricingbackend.repositories.AirportRepository;
 import org.example.koudynamicpricingbackend.repositories.FlightRepository;
 import org.example.koudynamicpricingbackend.repositories.SeatRepository;
@@ -163,14 +164,14 @@ public class FlightService {
 
     public FlightResponse getFlightById(Long id) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Flight not found with id: " + id));
+                .orElseThrow(() -> new FlightException("Flight not found with id: " + id));
         return mapToFlightResponse(flight);
     }
 
     @Transactional
     public FlightResponse updateFlight(Long id, UpdateFlightRequest request) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Flight not found"));
+                .orElseThrow(() -> new FlightException("Flight not found"));
 
         if (request.getNewDepartureTime() != null) {
             flight.setDepartureTime(request.getNewDepartureTime());
@@ -185,10 +186,13 @@ public class FlightService {
         return mapToFlightResponse(flightRepository.save(flight));
     }
 
+    @Transactional
     public void deleteFlight(Long id) {
         if (!flightRepository.existsById(id)) {
-            throw new RuntimeException("Flight not found");
+            throw new FlightException("Flight not found");
         }
+
+        seatRepository.deleteByFlightId(id);
         flightRepository.deleteById(id);
     }
 
