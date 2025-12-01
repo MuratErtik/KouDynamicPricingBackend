@@ -174,6 +174,8 @@ public class FlightService {
 
         if (request.getNewDepartureTime() != null) {
             flight.setDepartureTime(request.getNewDepartureTime());
+            LocalDateTime arrivalTime = basePriceService.calculateArrivalTime(flight.getDepartureAirport(),flight.getArrivalAirport(),request.getNewDepartureTime());
+            flight.setArrivalTime(arrivalTime);
         }
 
         if (request.getStatus() != null) {
