@@ -14,7 +14,10 @@ import org.example.koudynamicpricingbackend.repositories.AirportRepository;
 import org.example.koudynamicpricingbackend.repositories.FlightRepository;
 import org.example.koudynamicpricingbackend.repositories.SeatRepository;
 import org.example.koudynamicpricingbackend.requests.CreateFlightRequest;
+import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
+import org.example.koudynamicpricingbackend.responses.AirportResponse;
 import org.example.koudynamicpricingbackend.responses.CreateFlightResponse;
+import org.example.koudynamicpricingbackend.responses.FlightResponse;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,7 +39,7 @@ public class FlightService {
 
     private static final Integer FIX_TOTAL_SEATS = 90;
 
-    //CRUD
+    //C+RUD
 
     @Transactional
     public CreateFlightResponse createFlight(CreateFlightRequest request) {
@@ -123,6 +126,69 @@ public class FlightService {
         seatRepository.saveAll(seats);
     }
 
+    //all,id,departure,
+    public List<FlightResponse> getAllFlightsForAdmin() {
+        return flightRepository.findAll()
+                .stream()
+                .map(this::mapToFlightResponse)
+                .toList();
+    }
+
+    private  AirportResponse mapToAirportResponse(Airport airport) {
+        AirportResponse response = new AirportResponse();
+        response.setId(airport.getId());
+        response.setCity(airport.getCity());
+        response.setCountry(airport.getCountry());
+        response.setIataCode(airport.getIataCode());
+        response.setName(airport.getName());
+        return response;
+    }
+
+    private FlightResponse mapToFlightResponse(Flight flight) {
+        FlightResponse response = new FlightResponse();
+        response.setId(flight.getId());
+        response.setFlightNumber(flight.getFlightNumber());
+        response.setDepartureAirport(mapToAirportResponse(flight.getDepartureAirport()));
+        response.setArrivalAirport(mapToAirportResponse(flight.getArrivalAirport()));
+        response.setDepartureTime(flight.getDepartureTime());
+        response.setArrivalTime(flight.getArrivalTime());
+        response.setBasePrice(flight.getBasePrice());
+        response.setTotalSeats(flight.getTotalSeats());
+        response.setRemainingSeats(flight.getRemainingSeats());
+        response.setStatus(flight.getStatus());
+        return response;
+
+
+    }
+
+    public FlightResponse getFlightById(Long id) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Flight not found with id: " + id));
+        return mapToFlightResponse(flight);
+    }
+
+    @Transactional
+    public FlightResponse updateFlight(Long id, UpdateFlightRequest request) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Flight not found"));
+
+        if (request.getNewDepartureTime() != null) {
+            flight.setDepartureTime(request.getNewDepartureTime());
+        }
+
+        if (request.getStatus() != null) {
+            flight.setStatus(request.getStatus());
+        }
+
+        return mapToFlightResponse(flightRepository.save(flight));
+    }
+
+    public void deleteFlight(Long id) {
+        if (!flightRepository.existsById(id)) {
+            throw new RuntimeException("Flight not found");
+        }
+        flightRepository.deleteById(id);
+    }
 
 
 
