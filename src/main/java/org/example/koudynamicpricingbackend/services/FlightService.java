@@ -19,6 +19,9 @@ import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
 import org.example.koudynamicpricingbackend.responses.AirportResponse;
 import org.example.koudynamicpricingbackend.responses.CreateFlightResponse;
 import org.example.koudynamicpricingbackend.responses.FlightResponse;
+import org.example.koudynamicpricingbackend.specifications.FlightSpecifications;
+import org.jspecify.annotations.Nullable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -194,6 +197,81 @@ public class FlightService {
 
         seatRepository.deleteByFlightId(id);
         flightRepository.deleteById(id);
+    }
+
+    public List<FlightResponse> searchFlights(
+            String airline,
+            String status,
+            Double basePriceMin,
+            Double basePriceMax,
+
+            String depName,
+            String arrName,
+            String depIata,
+            String arrIata,
+            String depCity,
+            String arrCity,
+            String depCountry,
+            String arrCountry,
+
+            String depStart,
+            String depEnd,
+            boolean onlyFuture
+    ) {
+
+        Specification<Flight> spec = (root, query, cb) -> cb.conjunction();
+        
+        if (airline != null)
+            spec = spec.and(FlightSpecifications.airline(airline));
+
+        if (status != null)
+            spec = spec.and(FlightSpecifications.status(status));
+
+        if (basePriceMin != null)
+            spec = spec.and(FlightSpecifications.basePriceMin(basePriceMin));
+
+        if (basePriceMax != null)
+            spec = spec.and(FlightSpecifications.basePriceMax(basePriceMax));
+
+        // Airport Filters
+        if (depName != null)
+            spec = spec.and(FlightSpecifications.departureAirportName(depName));
+
+        if (arrName != null)
+            spec = spec.and(FlightSpecifications.arrivalAirportName(arrName));
+
+        if (depIata != null)
+            spec = spec.and(FlightSpecifications.departureAirportIata(depIata));
+
+        if (arrIata != null)
+            spec = spec.and(FlightSpecifications.arrivalAirportIata(arrIata));
+
+        if (depCity != null)
+            spec = spec.and(FlightSpecifications.departureCity(depCity));
+
+        if (arrCity != null)
+            spec = spec.and(FlightSpecifications.arrivalCity(arrCity));
+
+        if (depCountry != null)
+            spec = spec.and(FlightSpecifications.departureCountry(depCountry));
+
+        if (arrCountry != null)
+            spec = spec.and(FlightSpecifications.arrivalCountry(arrCountry));
+
+        // Time filters
+        if (depStart != null)
+            spec = spec.and(FlightSpecifications.departureTimeAfter(depStart));
+
+        if (depEnd != null)
+            spec = spec.and(FlightSpecifications.departureTimeBefore(depEnd));
+
+        if (onlyFuture)
+            spec = spec.and(FlightSpecifications.onlyFutureFlights());
+
+        return flightRepository.findAll(spec)
+                .stream()
+                .map(this::mapToFlightResponse)
+                .toList();
     }
 
 
