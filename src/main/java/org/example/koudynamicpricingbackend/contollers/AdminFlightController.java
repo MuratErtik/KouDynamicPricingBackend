@@ -32,7 +32,7 @@ public class AdminFlightController {
     }
 
     @GetMapping
-    public ResponseEntity<List<FlightResponse>> getAllFlights() {
+    public ResponseEntity<List<FlightResponse>> getAllFlights(@RequestHeader("Authorization") String jwt) {
         return ResponseEntity.ok(flightService.getAllFlightsForAdmin());
     }
 
