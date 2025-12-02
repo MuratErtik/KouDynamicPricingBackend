@@ -51,4 +51,46 @@ public class AdminFlightController {
         flightService.deleteFlight(id);
         return ResponseEntity.noContent().build(); // 204 No Content
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchFlights(
+            @RequestParam(required = false) String airline,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Double basePriceMin,
+            @RequestParam(required = false) Double basePriceMax,
+
+            @RequestParam(required = false) String departureAirportName,
+            @RequestParam(required = false) String arrivalAirportName,
+            @RequestParam(required = false) String departureAirportIataCode,
+            @RequestParam(required = false) String arrivalAirportIataCode,
+            @RequestParam(required = false) String departureCity,
+            @RequestParam(required = false) String arrivalCity,
+            @RequestParam(required = false) String departureCountry,
+            @RequestParam(required = false) String arrivalCountry,
+
+            @RequestParam(required = false) String departureTimeStart,
+            @RequestParam(required = false) String departureTimeEnd,
+            @RequestParam(defaultValue = "false") boolean onlyFutureFlights
+    ) {
+        return ResponseEntity.ok(
+                flightService.searchFlights(
+                        airline,
+                        status,
+                        basePriceMin,
+                        basePriceMax,
+                        departureAirportName,
+                        arrivalAirportName,
+                        departureAirportIataCode,
+                        arrivalAirportIataCode,
+                        departureCity,
+                        arrivalCity,
+                        departureCountry,
+                        arrivalCountry,
+                        departureTimeStart,
+                        departureTimeEnd,
+                        onlyFutureFlights
+                )
+        );
+    }
+
 }
