@@ -1,0 +1,152 @@
+FUNCTION_BLOCK DynamicPricing
+
+// ============================
+// 1. INPUTS & OUTPUTS
+// ============================
+
+VAR_INPUT
+    daysToDeparture : REAL;      // 0 – 180 days
+    occupancyRate   : REAL;      // 0.0 – 1.0
+    seasonality     : REAL;      // 0.7 – 1.6
+    dayScore        : REAL;      // YENİ: 0.0 (Salı) – 1.0 (Cuma)END_VAR
+
+VAR_OUTPUT
+    priceFactor : REAL;          // 0.5 – 2.0
+END_VAR
+
+
+// ============================
+// 2. FUZZIFICATION
+// ============================
+
+// --- Days To Departure ---
+FUZZIFY daysToDeparture
+    TERM veryShort := (0,1) (1,1) (3,0);
+    TERM short     := (1,0) (7,1) (15,0);
+    TERM medium    := (10,0) (30,1) (60,0);
+    TERM long      := (45,0) (90,1) (180,1);
+END_FUZZIFY
+
+
+// --- Occupancy Rate ---
+FUZZIFY occupancyRate
+    TERM low      := (0.0,1) (0.2,1) (0.45,0);
+    TERM medium   := (0.35,0) (0.55,1) (0.75,0);
+    TERM high     := (0.65,0) (0.80,1) (0.92,0);
+    TERM critical := (0.88,0) (0.95,1) (1.0,1);
+END_FUZZIFY
+
+
+// --- Seasonality ---
+FUZZIFY seasonality
+    TERM low_season    := (0.0,1) (0.7,1) (0.9,0);
+    TERM normal_season := (0.8,0) (1.0,1) (1.2,0);
+    TERM peak_season   := (1.15,0) (1.4,1) (1.6,1);
+END_FUZZIFY
+
+
+// --- Day Score (Basitleştirilmiş) ---
+FUZZIFY dayScore
+    TERM low_demand    := (0.0, 1) (0.2, 1) (0.4, 0); // Salı, Çarşamba
+    TERM medium_demand := (0.3, 0) (0.5, 1) (0.7, 0); // Cmt, Perş
+    TERM high_demand   := (0.6, 0) (0.8, 1) (1.0, 1); // Pzt, Cuma, Pazar
+END_FUZZIFY
+
+
+
+// ============================
+// 3. DEFUZZIFICATION
+// ============================
+
+DEFUZZIFY priceFactor
+    TERM discountStrong := (0.5,1) (0.6,1) (0.75,0);
+    TERM discountSoft   := (0.75,0) (0.9,1) (0.98,0);
+    TERM normal         := (0.95,0) (1.0,1) (1.1,0);
+    TERM increase       := (1.05,0) (1.25,1) (1.45,0);
+    TERM increaseHigh   := (1.4,0) (1.65,1) (2.0,1);
+
+    METHOD : COG;
+    DEFAULT := 1.0;
+END_DEFUZZIFY
+
+
+
+// ============================
+// 4. RULES
+// ============================
+
+RULEBLOCK PricingRules
+    AND : MIN;
+    ACT : MIN;
+    ACCU : MAX;
+
+
+
+    // -------------------------
+    // EXISTING RULES (1–15)
+    // -------------------------
+
+    RULE 1  : IF occupancyRate IS critical
+              THEN priceFactor IS increaseHigh WITH 0.9;
+
+    RULE 2  : IF daysToDeparture IS long AND occupancyRate IS low AND seasonality IS normal_season
+              THEN priceFactor IS discountStrong WITH 0.7;
+
+    RULE 3  : IF daysToDeparture IS long AND occupancyRate IS high
+              THEN priceFactor IS normal;
+
+    RULE 4  : IF daysToDeparture IS medium AND occupancyRate IS low
+              THEN priceFactor IS discountSoft;
+
+    RULE 5  : IF daysToDeparture IS medium AND occupancyRate IS medium
+              THEN priceFactor IS normal;
+
+    RULE 6  : IF daysToDeparture IS medium AND occupancyRate IS high
+              THEN priceFactor IS increase;
+
+    RULE 7  : IF daysToDeparture IS short AND occupancyRate IS low
+              THEN priceFactor IS discountSoft;
+
+    RULE 8  : IF daysToDeparture IS short AND occupancyRate IS medium
+              THEN priceFactor IS increase;
+
+    RULE 9  : IF daysToDeparture IS short AND occupancyRate IS high
+              THEN priceFactor IS increaseHigh;
+
+    RULE 10 : IF daysToDeparture IS veryShort AND occupancyRate IS low
+              THEN priceFactor IS discountSoft WITH 0.6;
+
+    RULE 11 : IF daysToDeparture IS veryShort AND occupancyRate IS high
+              THEN priceFactor IS increaseHigh WITH 1.0;
+
+    RULE 12 : IF seasonality IS peak_season AND occupancyRate IS low
+              THEN priceFactor IS normal;
+
+    RULE 13 : IF seasonality IS peak_season AND daysToDeparture IS veryShort
+              THEN priceFactor IS increaseHigh;
+
+    RULE 14 : IF seasonality IS low_season AND occupancyRate IS medium
+              THEN priceFactor IS discountSoft;
+
+    RULE 15 : IF seasonality IS low_season AND occupancyRate IS low
+              THEN priceFactor IS discountStrong;
+
+
+
+// NEW DAY RULES
+    // Skor düşükse (Salı/Çarş) ve uçak boşsa -> İndirim yap
+    RULE 16 : IF dayScore IS low_demand AND occupancyRate IS low
+              THEN priceFactor IS discountStrong WITH 0.8;
+
+    // Skor yüksekse (Hafta sonu/Pzt) ve uçak dolmaya başladıysa -> Zam yap
+    RULE 17 : IF dayScore IS high_demand AND occupancyRate IS medium
+              THEN priceFactor IS increase WITH 0.6;
+
+    // Skor yüksekse ve son dakika ise -> Fahiş Fiyat
+    RULE 18 : IF dayScore IS high_demand AND daysToDeparture IS veryShort
+              THEN priceFactor IS increaseHigh WITH 1.0;
+
+
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
