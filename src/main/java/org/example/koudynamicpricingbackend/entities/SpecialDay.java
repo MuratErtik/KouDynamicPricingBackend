@@ -18,16 +18,20 @@ public class SpecialDay {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    private String name; // "Christmas", "Bayram", "Sömestr"
 
-    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
-
-    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-
-    @Column(name = "price_multiplier", nullable = false)
     private Double priceMultiplier;
+
+    // TARGET COUNTRY — ör: "Germany", "Turkey", "France"
+    @Column(name = "target_country")
+    private String targetCountry;
+
+    @Column(name = "target_city")
+    private String targetCity;
+
+    @Column(name = "is_recurring", nullable = false)
+    private boolean isRecurring = false;
 }
