@@ -8,7 +8,10 @@ VAR_INPUT
     daysToDeparture : REAL;      // 0 – 180 days
     occupancyRate   : REAL;      // 0.0 – 1.0
     seasonality     : REAL;      // 0.7 – 1.6
-    dayScore        : REAL;      // YENİ: 0.0 (Salı) – 1.0 (Cuma)END_VAR
+    dayScore        : REAL;      // YENİ: 0.0 (Salı) – 1.0 (Cuma)
+    timeScore : REAL;            // 0.0 (low demand hour) – 1.0 (peak hour)
+
+END_VAR
 
 VAR_OUTPUT
     priceFactor : REAL;          // 0.5 – 2.0
@@ -51,6 +54,14 @@ FUZZIFY dayScore
     TERM medium_demand := (0.3, 0) (0.5, 1) (0.7, 0); // Cmt, Perş
     TERM high_demand   := (0.6, 0) (0.8, 1) (1.0, 1); // Pzt, Cuma, Pazar
 END_FUZZIFY
+
+// --- Hours ---
+FUZZIFY timeScore
+    TERM low_demand_hour    := (0.0,1) (0.2,1) (0.35,0);   // Gece / çok düşük talep
+    TERM medium_demand_hour := (0.3,0) (0.5,1) (0.7,0);    // Normal saatler
+    TERM peak_hour          := (0.6,0) (0.8,1) (1.0,1);    // 06-08 ve 17-20
+END_FUZZIFY
+
 
 
 
@@ -145,6 +156,20 @@ RULEBLOCK PricingRules
     // Skor yüksekse ve son dakika ise -> Fahiş Fiyat
     RULE 18 : IF dayScore IS high_demand AND daysToDeparture IS veryShort
               THEN priceFactor IS increaseHigh WITH 1.0;
+
+    RULE 19 :
+    IF timeScore IS low_demand_hour AND occupancyRate IS low
+    THEN priceFactor IS discountSoft;
+
+
+    RULE 20 :
+    IF timeScore IS peak_hour AND occupancyRate IS medium
+    THEN priceFactor IS increase WITH 0.6;
+
+
+    RULE 21 :
+    IF timeScore IS peak_hour AND daysToDeparture IS veryShort
+    THEN priceFactor IS increaseHigh WITH 1.0;
 
 
 END_RULEBLOCK
