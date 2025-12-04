@@ -2,13 +2,14 @@ package org.example.koudynamicpricingbackend.repositories;
 
 import org.example.koudynamicpricingbackend.entities.SpecialDay;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
 
-public interface SpecialDayRepository extends JpaRepository<SpecialDay, Long> {
+public interface SpecialDayRepository extends JpaRepository<SpecialDay, Long> , JpaSpecificationExecutor<SpecialDay> {
     // Query has three part;
     //first checking country scope, if target country is null it will be global scope like new year
     //second checking date for recurring
