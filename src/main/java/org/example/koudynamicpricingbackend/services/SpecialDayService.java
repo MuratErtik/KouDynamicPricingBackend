@@ -2,6 +2,7 @@ package org.example.koudynamicpricingbackend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.entities.SpecialDay;
+import org.example.koudynamicpricingbackend.exceptions.SpecialDayException;
 import org.example.koudynamicpricingbackend.repositories.SpecialDayRepository;
 import org.example.koudynamicpricingbackend.requests.AddSpecialDayRequest;
 import org.example.koudynamicpricingbackend.responses.AddSpecialDayResponse;
@@ -79,6 +80,13 @@ public class SpecialDayService {
         response.setRecurring(savedDay.isRecurring());
         response.setTargetCity(savedDay.getTargetCity());
         return response;
+    }
+
+    public void deleteSpecialDay(Long id) {
+        if (!specialDayRepository.existsById(id)) {
+            throw new SpecialDayException("Special day not found with id: " + id);
+        }
+        specialDayRepository.deleteById(id);
     }
 
 
