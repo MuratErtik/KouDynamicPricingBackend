@@ -40,5 +40,13 @@ public class AirportService {
 
     }
 
+    public List<String> getAllCountries() {
+        return airportRepository.findAllCountries();
+    }
+
+    public List<String> getCitiesByCountry(String country) {
+        return airportRepository.findCitiesByCountry(country);
+    }
+
 
 }
