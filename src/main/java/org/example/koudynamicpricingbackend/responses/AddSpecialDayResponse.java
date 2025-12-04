@@ -25,5 +25,5 @@ public class AddSpecialDayResponse {
 
     private String targetCity;
 
-    private boolean isRecurring = false;
+    private boolean isRecurring;
 }
