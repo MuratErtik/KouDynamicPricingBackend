@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -51,6 +52,37 @@ public class AdminSpecialDayController {
         SpecialDayResponse response = specialDayService.updateSpecialDay(id, request);
 
         return ResponseEntity.ok(response);
+    }
+
+    // ...
+
+    @GetMapping("/search")
+    public ResponseEntity<List<SpecialDayResponse>> searchSpecialDays(
+            @RequestParam(required = false) String name,
+
+            @RequestParam(required = false) String targetCountry,
+            @RequestParam(required = false) String targetCity,
+
+            @RequestParam(required = false) Boolean isRecurring,
+
+            @RequestParam(required = false) Double minMultiplier,
+            @RequestParam(required = false) Double maxMultiplier,
+
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(
+                specialDayService.searchSpecialDays(
+                        name,
+                        targetCountry,
+                        targetCity,
+                        isRecurring,
+                        minMultiplier,
+                        maxMultiplier,
+                        startDate,
+                        endDate
+                )
+        );
     }
 
 
