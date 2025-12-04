@@ -28,5 +28,5 @@ public class AddSpecialDayRequest {
 
     private String targetCity;
 
-    private boolean isRecurring = false;
+    private boolean isRecurring;
 }
