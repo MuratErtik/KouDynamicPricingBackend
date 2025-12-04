@@ -7,7 +7,9 @@ import org.example.koudynamicpricingbackend.repositories.SpecialDayRepository;
 import org.example.koudynamicpricingbackend.requests.AddSpecialDayRequest;
 import org.example.koudynamicpricingbackend.responses.AddSpecialDayResponse;
 import org.example.koudynamicpricingbackend.responses.SpecialDayResponse;
+import org.example.koudynamicpricingbackend.specifications.SpecialDaySpecifications;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -112,6 +114,28 @@ public class SpecialDayService {
         SpecialDay updatedDay = specialDayRepository.save(existingDay);
 
         return mapToSpecialDayResponse(updatedDay);
+    }
+
+    public List<SpecialDayResponse> searchSpecialDays(
+            String name,
+            String targetCountry,
+            String targetCity,
+            Boolean isRecurring,
+            Double minMultiplier,
+            Double maxMultiplier,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        Specification<SpecialDay> spec = SpecialDaySpecifications.withFilters(
+                name, targetCountry, targetCity, isRecurring,
+                minMultiplier, maxMultiplier, startDate, endDate
+        );
+
+        List<SpecialDay> days = specialDayRepository.findAll(spec);
+
+        return days.stream()
+                .map(this::mapToSpecialDayResponse)
+                .collect(Collectors.toList());
     }
 
 
