@@ -37,5 +37,12 @@ public class AdminSpecialDayController {
     }
 
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSpecialDay(@PathVariable Long id) {
+        specialDayService.deleteSpecialDay(id);
+        return ResponseEntity.noContent().build(); // 204 No Content
+    }
+
+
 
 }
