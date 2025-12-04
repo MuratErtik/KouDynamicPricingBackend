@@ -5,10 +5,13 @@ import org.example.koudynamicpricingbackend.entities.SpecialDay;
 import org.example.koudynamicpricingbackend.repositories.SpecialDayRepository;
 import org.example.koudynamicpricingbackend.requests.AddSpecialDayRequest;
 import org.example.koudynamicpricingbackend.responses.AddSpecialDayResponse;
+import org.example.koudynamicpricingbackend.responses.SpecialDayResponse;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +50,30 @@ public class SpecialDayService {
         response.setName(savedDay.getName());
         response.setStartDate(savedDay.getStartDate());
         response.setEndDate(savedDay.getEndDate());
+        response.setPriceMultiplier(savedDay.getPriceMultiplier());
+        response.setTargetCountry(savedDay.getTargetCountry());
+        response.setRecurring(savedDay.isRecurring());
+        response.setTargetCity(savedDay.getTargetCity());
+        return response;
+    }
+
+    public List<SpecialDayResponse> getAllSpecialDays() {
+
+        List<SpecialDay> days = specialDayRepository.findAll(Sort.by(Sort.Direction.DESC, "startDate"));
+
+        return days.stream()
+                .map(this::mapToSpecialDayResponse)
+                .collect(Collectors.toList());
+
+    }
+
+    private SpecialDayResponse mapToSpecialDayResponse(SpecialDay savedDay) {
+        SpecialDayResponse response = new SpecialDayResponse();
+        response.setId(savedDay.getId());
+        response.setName(savedDay.getName());
+        response.setStartDate(savedDay.getStartDate());
+        response.setEndDate(savedDay.getEndDate());
+
         response.setPriceMultiplier(savedDay.getPriceMultiplier());
         response.setTargetCountry(savedDay.getTargetCountry());
         response.setRecurring(savedDay.isRecurring());
