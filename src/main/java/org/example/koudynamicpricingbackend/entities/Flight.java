@@ -45,6 +45,10 @@ public class Flight {
     @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice;
 
+    //fuzzy price
+    @Column(name = "current_price")
+    private BigDecimal currentPrice;
+
     @Column(name = "total_seats", nullable = false)
     private Integer totalSeats = 90;
 
