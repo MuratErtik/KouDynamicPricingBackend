@@ -29,7 +29,7 @@ public class FlightSpecifications {
     // ---------------------------------
 
     public static Specification<Flight> airline(String airline) {
-        return (root, query, cb) -> cb.equal(root.get("flightNumber"), airline); // airline yoksa flightNumber prefix yapılabilir
+        return (root, query, cb) -> cb.equal(root.get("flightNumber"), airline);
     }
 
     public static Specification<Flight> status(String status) {
