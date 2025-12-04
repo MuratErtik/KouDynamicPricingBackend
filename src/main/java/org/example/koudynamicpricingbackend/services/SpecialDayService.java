@@ -89,6 +89,31 @@ public class SpecialDayService {
         specialDayRepository.deleteById(id);
     }
 
+    public SpecialDayResponse updateSpecialDay(Long id, AddSpecialDayRequest request) {
+
+        SpecialDay existingDay = specialDayRepository.findById(id)
+                .orElseThrow(() -> new SpecialDayException("Special day not found with id: " + id));
+
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new SpecialDayException("End date cannot be before start date!");
+        }
+
+        String cleanCountry = (request.getTargetCountry() != null) ? request.getTargetCountry().trim() : null;
+        String cleanCity = (request.getTargetCity() != null) ? request.getTargetCity().trim() : null;
+
+        existingDay.setName(request.getName().trim());
+        existingDay.setStartDate(request.getStartDate());
+        existingDay.setEndDate(request.getEndDate());
+        existingDay.setPriceMultiplier(request.getPriceMultiplier());
+        existingDay.setRecurring(request.isRecurring());
+        existingDay.setTargetCountry(cleanCountry);
+        existingDay.setTargetCity(cleanCity);
+
+        SpecialDay updatedDay = specialDayRepository.save(existingDay);
+
+        return mapToSpecialDayResponse(updatedDay);
+    }
+
 
 
 
