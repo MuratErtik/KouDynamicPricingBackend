@@ -43,6 +43,16 @@ public class AdminSpecialDayController {
         return ResponseEntity.noContent().build(); // 204 No Content
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<SpecialDayResponse> updateSpecialDay(
+            @PathVariable Long id,
+            @Valid @RequestBody AddSpecialDayRequest request) {
+
+        SpecialDayResponse response = specialDayService.updateSpecialDay(id, request);
+
+        return ResponseEntity.ok(response);
+    }
+
 
 
 }
