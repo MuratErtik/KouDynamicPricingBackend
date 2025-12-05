@@ -1,6 +1,7 @@
 package org.example.koudynamicpricingbackend.services;
 
 import lombok.RequiredArgsConstructor;
+import org.example.koudynamicpricingbackend.entities.Airport;
 import org.example.koudynamicpricingbackend.entities.SpecialDay;
 import org.example.koudynamicpricingbackend.exceptions.SpecialDayException;
 import org.example.koudynamicpricingbackend.repositories.SpecialDayRepository;
@@ -139,11 +140,15 @@ public class SpecialDayService {
     }
 
 
-
-
-
-
     // it will be called while flight creating or updating
-    //public Double getSeasonalityScore(LocalDate date, Airport departure, Airport arrival)
+    public double getSeasonalityScore(LocalDate date, Airport departure, Airport arrival) {
 
+        String depCountry = departure.getCountry();
+        String arrCountry = arrival.getCountry();
+
+
+        return specialDayRepository.findApplicableSpecialDay(date, depCountry, arrCountry)
+                .map(SpecialDay::getPriceMultiplier)
+                .orElse(1.0);
+    }
 }
