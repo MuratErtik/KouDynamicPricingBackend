@@ -41,7 +41,7 @@ public class FlightService {
 
     private final BasePriceService basePriceService;
 
-    private static final Integer FIX_TOTAL_SEATS = 90;
+    private static final Integer FIX_TOTAL_SEATS = 60;
 
     //C+RUD
 
