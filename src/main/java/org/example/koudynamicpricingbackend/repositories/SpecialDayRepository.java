@@ -18,20 +18,17 @@ public interface SpecialDayRepository extends JpaRepository<SpecialDay, Long> , 
     @Query("SELECT s FROM SpecialDay s WHERE " +
             "(s.targetCountry IS NULL OR s.targetCountry = :depCountry OR s.targetCountry = :arrCountry) " +
             "AND " +
-
-            // 2. TARİH KONTROLÜ
             "( " +
-            // A) Tekrarlı DEĞİLSE (Örn: Kurban Bayramı 2025): Tam tarih aralığına bak.
-            "  (s.isRecurring = false AND :flightDate BETWEEN s.startDate AND s.endDate) " +
+            //  Not Recurring
+            "  (s.isRecurring = false AND cast(:flightDate as date) BETWEEN s.startDate AND s.endDate) " +
             "  OR " +
-            // B) Tekrarlı İSE (Örn: Yılbaşı): Yılı yoksay, Ay ve Gün aralığına bak.
+            //  Recurring
             "  (s.isRecurring = true AND " +
-            "   (MONTH(:flightDate) * 100 + DAY(:flightDate)) BETWEEN " +
-            "   (MONTH(s.startDate) * 100 + DAY(s.startDate)) AND " +
-            "   (MONTH(s.endDate) * 100 + DAY(s.endDate)) " +
+            "   (EXTRACT(MONTH FROM cast(:flightDate as date)) * 100 + EXTRACT(DAY FROM cast(:flightDate as date))) BETWEEN " +
+            "   (EXTRACT(MONTH FROM s.startDate) * 100 + EXTRACT(DAY FROM s.startDate)) AND " +
+            "   (EXTRACT(MONTH FROM s.endDate) * 100 + EXTRACT(DAY FROM s.endDate)) " +
             "  ) " +
             ") " +
-
             "ORDER BY s.priceMultiplier DESC LIMIT 1")
     Optional<SpecialDay> findApplicableSpecialDay(
             @Param("flightDate") LocalDate flightDate,
