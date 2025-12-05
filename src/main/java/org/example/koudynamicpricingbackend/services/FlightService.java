@@ -13,6 +13,7 @@ import org.example.koudynamicpricingbackend.exceptions.AirportException;
 import org.example.koudynamicpricingbackend.exceptions.FlightException;
 import org.example.koudynamicpricingbackend.repositories.AirportRepository;
 import org.example.koudynamicpricingbackend.repositories.FlightRepository;
+import org.example.koudynamicpricingbackend.repositories.PriceHistoryRepository;
 import org.example.koudynamicpricingbackend.repositories.SeatRepository;
 import org.example.koudynamicpricingbackend.requests.CreateFlightRequest;
 import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
@@ -40,6 +41,10 @@ public class FlightService {
     private final AirportRepository airportRepository;
 
     private final BasePriceService basePriceService;
+
+    private final DynamicPricingService dynamicPricingService;
+
+    private final PriceHistoryRepository priceHistoryRepository;
 
     private static final Integer FIX_TOTAL_SEATS = 60;
 
@@ -76,19 +81,24 @@ public class FlightService {
 
         generateSeatsForFlight(savedFlight);
 
+        dynamicPricingService.updatePriceForFlight(savedFlight.getId(), "Initial Calculation (Create)");
+
+        Flight refreshedFlight = flightRepository.findById(savedFlight.getId())
+                .orElseThrow(() -> new RuntimeException("Flight not found after create"));
+
         CreateFlightResponse response = new CreateFlightResponse();
-        response.setFlightNumber(savedFlight.getFlightNumber());
-        response.setId(savedFlight.getId());
-        response.setBasePrice(basePrice);
+        response.setFlightNumber(refreshedFlight.getFlightNumber());
+        response.setId(refreshedFlight.getId());
+        response.setBasePrice(refreshedFlight.getCurrentPrice());
         response.setDepartureCity(departureAirport.getCity());
         response.setDepartureIataCode(departureAirport.getIataCode());
         response.setArrivalCity(arrivalAirport.getCity());
         response.setArrivalIataCode(arrivalAirport.getIataCode());
 
-        response.setDepartureTime(savedFlight.getDepartureTime());
+        response.setDepartureTime(refreshedFlight.getDepartureTime());
 
         response.setArrivalTime(arrivalTime);
-        response.setTotalSeats(savedFlight.getTotalSeats());
+        response.setTotalSeats(refreshedFlight.getTotalSeats());
         response.setStatus(FlightStatus.SCHEDULED);
 
         return response;
@@ -156,7 +166,7 @@ public class FlightService {
         response.setArrivalAirport(mapToAirportResponse(flight.getArrivalAirport()));
         response.setDepartureTime(flight.getDepartureTime());
         response.setArrivalTime(flight.getArrivalTime());
-        response.setBasePrice(flight.getBasePrice());
+        response.setBasePrice(flight.getCurrentPrice());
         response.setTotalSeats(flight.getTotalSeats());
         response.setRemainingSeats(flight.getRemainingSeats());
         response.setStatus(flight.getStatus());
@@ -180,6 +190,7 @@ public class FlightService {
             flight.setDepartureTime(request.getNewDepartureTime());
             LocalDateTime arrivalTime = basePriceService.calculateArrivalTime(flight.getDepartureAirport(),flight.getArrivalAirport(),request.getNewDepartureTime());
             flight.setArrivalTime(arrivalTime);
+            dynamicPricingService.updatePriceForFlight(flight.getId(), "Admin Reschedule (Time Change or Day Changed)");
         }
 
         if (request.getStatus() != null) {
@@ -196,6 +207,7 @@ public class FlightService {
         }
 
         seatRepository.deleteByFlightId(id);
+        priceHistoryRepository.deleteByFlightId(id);
         flightRepository.deleteById(id);
     }
 
