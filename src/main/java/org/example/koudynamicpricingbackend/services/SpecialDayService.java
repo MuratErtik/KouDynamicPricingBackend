@@ -23,6 +23,8 @@ public class SpecialDayService {
 
     private final SpecialDayRepository specialDayRepository;
 
+    private final DynamicPricingService dynamicPricingService;
+
     public AddSpecialDayResponse addSpecialDay(AddSpecialDayRequest request) {
 
         if (request.getEndDate().isBefore(request.getStartDate())) {
@@ -43,6 +45,8 @@ public class SpecialDayService {
                 .build();
 
         SpecialDay savedDay = specialDayRepository.save(specialDay);
+
+        dynamicPricingService.updatePricesAffectedBySpecialDay(savedDay);
 
         return getAddSpecialDayResponse(savedDay);
     }
@@ -86,10 +90,13 @@ public class SpecialDayService {
     }
 
     public void deleteSpecialDay(Long id) {
-        if (!specialDayRepository.existsById(id)) {
-            throw new SpecialDayException("Special day not found with id: " + id);
-        }
-        specialDayRepository.deleteById(id);
+        SpecialDay dayToDelete = specialDayRepository.findById(id)
+                .orElseThrow(() -> new SpecialDayException("Special day not found with id: " + id));
+
+        specialDayRepository.delete(dayToDelete);
+
+        dynamicPricingService.updatePricesAffectedBySpecialDay(dayToDelete);
+
     }
 
     public SpecialDayResponse updateSpecialDay(Long id, AddSpecialDayRequest request) {
@@ -113,6 +120,8 @@ public class SpecialDayService {
         existingDay.setTargetCity(cleanCity);
 
         SpecialDay updatedDay = specialDayRepository.save(existingDay);
+
+        dynamicPricingService.updatePricesAffectedBySpecialDay(updatedDay);
 
         return mapToSpecialDayResponse(updatedDay);
     }
