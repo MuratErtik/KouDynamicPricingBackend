@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.PriceHistory;
 import org.example.koudynamicpricingbackend.entities.SpecialDay;
+import org.example.koudynamicpricingbackend.exceptions.FlightException;
 import org.example.koudynamicpricingbackend.repositories.FlightRepository;
 import org.example.koudynamicpricingbackend.repositories.PriceHistoryRepository;
 import org.example.koudynamicpricingbackend.services.PricingCalculator;
@@ -35,7 +36,7 @@ public class DynamicPricingService {
     @Transactional
     public void updatePriceForFlight(Long flightId, String triggerReason) {
         Flight flight = flightRepository.findById(flightId)
-                .orElseThrow(() -> new RuntimeException("Flight not found: " + flightId));
+                .orElseThrow(() -> new FlightException("Flight not found: " + flightId));
 
         int daysLeft = pricingCalculator.calculateDaysLeft(flight.getDepartureTime());
         double occupancyRate = pricingCalculator.calculateOccupancyRate(flight);
@@ -56,7 +57,11 @@ public class DynamicPricingService {
                 daysLeft, occupancyRate, seasonality, dayScore, timeScore
         );
 
+
         BigDecimal oldPrice = flight.getCurrentPrice();
+        if (oldPrice == null) {
+            oldPrice = flight.getBasePrice();
+        }
         BigDecimal newPrice = flight.getBasePrice().multiply(BigDecimal.valueOf(multiplier)); // can change !!!!!!
 
         //if price does not change dont log it (prevent from unnecessary logs)
