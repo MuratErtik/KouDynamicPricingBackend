@@ -1,5 +1,6 @@
 package org.example.koudynamicpricingbackend.services;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.entities.Airport;
 import org.example.koudynamicpricingbackend.entities.SpecialDay;
@@ -9,6 +10,7 @@ import org.example.koudynamicpricingbackend.requests.AddSpecialDayRequest;
 import org.example.koudynamicpricingbackend.responses.AddSpecialDayResponse;
 import org.example.koudynamicpricingbackend.responses.SpecialDayResponse;
 import org.example.koudynamicpricingbackend.specifications.SpecialDaySpecifications;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -18,12 +20,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+
 public class SpecialDayService {
 
     private final SpecialDayRepository specialDayRepository;
 
     private final DynamicPricingService dynamicPricingService;
+
+    //@Lazy annotation does not wait while creating this service and prevent the loops as using temporary proxy
+    public SpecialDayService(SpecialDayRepository specialDayRepository,
+                             @Lazy DynamicPricingService dynamicPricingService) {
+        this.specialDayRepository = specialDayRepository;
+        this.dynamicPricingService = dynamicPricingService;
+    }
 
     public AddSpecialDayResponse addSpecialDay(AddSpecialDayRequest request) {
 
@@ -99,6 +108,7 @@ public class SpecialDayService {
 
     }
 
+    @Transactional
     public SpecialDayResponse updateSpecialDay(Long id, AddSpecialDayRequest request) {
 
         SpecialDay existingDay = specialDayRepository.findById(id)
@@ -107,6 +117,16 @@ public class SpecialDayService {
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new SpecialDayException("End date cannot be before start date!");
         }
+
+        //this object wont save in db just using for trigger
+        //if date or area will be changed this object will find old fights which dont affected by special day anymore and decrease the price of flight
+        SpecialDay oldStateSnapshot = SpecialDay.builder()
+                .startDate(existingDay.getStartDate())
+                .endDate(existingDay.getEndDate())
+                .targetCountry(existingDay.getTargetCountry())
+                .targetCity(existingDay.getTargetCity())
+                .name(existingDay.getName()) // for logging
+                .build();
 
         String cleanCountry = (request.getTargetCountry() != null) ? request.getTargetCountry().trim() : null;
         String cleanCity = (request.getTargetCity() != null) ? request.getTargetCity().trim() : null;
@@ -122,6 +142,15 @@ public class SpecialDayService {
         SpecialDay updatedDay = specialDayRepository.save(existingDay);
 
         dynamicPricingService.updatePricesAffectedBySpecialDay(updatedDay);
+
+        boolean isScopeChanged = !oldStateSnapshot.getStartDate().isEqual(updatedDay.getStartDate()) ||
+                !oldStateSnapshot.getEndDate().isEqual(updatedDay.getEndDate()) ||
+                (oldStateSnapshot.getTargetCountry() != null && !oldStateSnapshot.getTargetCountry().equals(updatedDay.getTargetCountry()));
+
+        if (isScopeChanged) {
+            System.out.println("area or time changed! it makes cleaning in db for old date/area...");
+            dynamicPricingService.updatePricesAffectedBySpecialDay(oldStateSnapshot);
+        }
 
         return mapToSpecialDayResponse(updatedDay);
     }
