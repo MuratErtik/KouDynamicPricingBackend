@@ -1,5 +1,10 @@
 package org.example.koudynamicpricingbackend.contollers;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.responses.AirportResponse;
 import org.example.koudynamicpricingbackend.services.AirportService;
@@ -33,5 +38,21 @@ public class AirportController {
         return ResponseEntity.ok(airportService.getCitiesByCountry(country));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<AirportResponse>> searchAirports(
+            @RequestParam(required = false) String iataCode,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String country
+    ) {
+        return ResponseEntity.ok(
+                airportService.searchFlights(
+                        iataCode,
+                        name,
+                        city,
+                        country
+                )
+        );
+    }
 
 }
