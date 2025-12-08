@@ -2,12 +2,17 @@ package org.example.koudynamicpricingbackend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.entities.Airport;
+import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.User;
 import org.example.koudynamicpricingbackend.exceptions.AuthException;
 import org.example.koudynamicpricingbackend.repositories.AirportRepository;
 import org.example.koudynamicpricingbackend.requests.SigninRequest;
 import org.example.koudynamicpricingbackend.responses.AirportResponse;
 import org.example.koudynamicpricingbackend.responses.AuthResponse;
+import org.example.koudynamicpricingbackend.specifications.AirportSpecification;
+import org.example.koudynamicpricingbackend.specifications.FlightSpecifications;
+import org.jspecify.annotations.Nullable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -49,4 +54,24 @@ public class AirportService {
     }
 
 
+    public List<AirportResponse>  searchFlights(String iataCode, String name, String city, String country) {
+
+        Specification<Airport> spec = (root, query, cb) -> cb.conjunction();
+
+        if (iataCode != null)
+            spec = spec.and(AirportSpecification.hasIataCode(iataCode));
+
+        if (name != null)
+            spec = spec.and(AirportSpecification.hasName(name));
+
+        if (city != null)
+            spec = spec.and(AirportSpecification.hasCity(city));
+
+        if (country != null)
+            spec = spec.and(AirportSpecification.hasCountry(country));
+
+        return airportRepository.findAll(spec)
+                .stream()
+                .map(this::mapToAirportResponse).collect(Collectors.toList());
+    }
 }
