@@ -12,4 +12,7 @@ public interface FlightRepository extends JpaRepository<Flight, Long>, JpaSpecif
 
     @Query("SELECT f FROM Flight f WHERE f.departureTime BETWEEN :start AND :end")
     List<Flight> findFlightsInDateRange(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT f FROM Flight f WHERE f.departureTime > CURRENT_TIMESTAMP")
+    List<Flight> findAllFutureFlights();
 }
