@@ -78,9 +78,9 @@ public class DynamicPricingService {
     }
 
     /**
-     * SENARYO 3: TOPLU GÜNCELLEME (ÖZEL GÜN EKLENİNCE)
-     * - Admin yeni bir "Bayram" veya "Festival" eklediğinde çağrılır.
-     * - O tarih aralığındaki ve o ülkedeki TÜM uçuşları bulur ve fiyatlarını günceller.
+     * Multi Update!
+     * it calls when admin adding new special day
+     * - and it finds flights which range of that date and country and updates prices.
      */
     @Transactional
     public void updatePricesAffectedBySpecialDay(SpecialDay specialDay) {
