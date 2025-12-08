@@ -23,36 +23,41 @@ public class NightlyPriceUpdateJob {
 
 
      //It going to work at 3.00 AM
-    @Scheduled(cron = "0 0 3 * * ?")
-    public void updateFlightPrices() {
+     @Scheduled(cron = "0 0 3 * * ?", zone = "Europe/Istanbul")
+     public void updateFlightPrices() {
 
-        log.info("Nightly Price Update Job Started...");
+         try {
+             log.info("Nightly Price Update Job Started...");
 
-        // it fetches only future flights
-        List<Flight> futureFlights = flightRepository.findAll().stream()
-                .filter(f -> f.getDepartureTime().isAfter(LocalDateTime.now()))
-                .toList();
 
-        if (futureFlights.isEmpty()) {
-            log.info("No future flights found. Skipping update.");
-            return;
-        }
+             List<Flight> futureFlights = flightRepository.findAllFutureFlights();
 
-        log.info("Found {} future flights to update.", futureFlights.size());
+             if (futureFlights.isEmpty()) {
+                 log.info("No future flights found. Skipping update.");
+                 return;
+             }
 
-        int successCount = 0;
-        int errorCount = 0;
+             log.info("Found {} future flights to update.", futureFlights.size());
 
-        for (Flight flight : futureFlights) {
-            try {
-                dynamicPricingService.updatePriceForFlight(flight.getId(), "Nightly Job (Time Decay)");
-                successCount++;
-            } catch (FlightException e) {
-                log.error("Failed to update price for flight ID: {}", flight.getId(), e);
-                errorCount++;
-            }
-        }
+             int successCount = 0;
+             int errorCount = 0;
 
-        log.info("Nightly Job Finished. Success: {}, Errors: {}", successCount, errorCount);
-    }
+             for (Flight flight : futureFlights) {
+                 try {
+                     dynamicPricingService.updatePriceForFlight(flight.getId(), "Nightly Job (Time Decay)");
+                     successCount++;
+                 } catch (Exception e) {
+                     log.error("Failed to update price for flight ID: {}", flight.getId(), e);
+                     errorCount++;
+                 }
+             }
+
+             log.info("Nightly Job Finished. Success: {}, Errors: {}", successCount, errorCount);
+
+         } catch (Exception e) {
+             log.error("CRITICAL ERROR: Nightly Job crashed entirely!", e);
+         }
+     }
+
+
 }
