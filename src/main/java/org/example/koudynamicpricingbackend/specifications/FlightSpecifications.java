@@ -11,6 +11,7 @@ import jakarta.persistence.criteria.JoinType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class FlightSpecifications {
 
@@ -127,8 +128,10 @@ public class FlightSpecifications {
     public static Specification<Flight> departureTime(String start) {
 
         LocalDate date = LocalDate.parse(start);
-        LocalDateTime dateTime = date.atStartOfDay();
-        return (root, query, cb) -> cb.equal(root.get("departureTime"), date);
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+
+        return (root, query, cb) -> cb.between(root.get("departureTime"), startOfDay, endOfDay);
     }
 
     public static Specification<Flight> departureTimeBefore(String end) {
