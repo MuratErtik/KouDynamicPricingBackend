@@ -293,7 +293,7 @@ public class FlightService {
         Specification<Flight> spec = (root, query, cb) -> cb.conjunction();
 
         if (departureAirportIataCode != null)
-            spec = spec.and(FlightSpecifications.departureAirportIata(arrivalAirportIataCode));
+            spec = spec.and(FlightSpecifications.departureAirportIata(departureAirportIataCode));
 
         if (arrivalAirportIataCode != null)
             spec = spec.and(FlightSpecifications.arrivalAirportIata(arrivalAirportIataCode));
