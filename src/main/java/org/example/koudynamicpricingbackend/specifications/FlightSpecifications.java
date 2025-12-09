@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class FlightSpecifications {
@@ -120,6 +122,13 @@ public class FlightSpecifications {
     public static Specification<Flight> departureTimeAfter(String start) {
         LocalDateTime date = LocalDateTime.parse(start);
         return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("departureTime"), date);
+    }
+
+    public static Specification<Flight> departureTime(String start) {
+
+        LocalDate date = LocalDate.parse(start);
+        LocalDateTime dateTime = date.atStartOfDay();
+        return (root, query, cb) -> cb.equal(root.get("departureTime"), date);
     }
 
     public static Specification<Flight> departureTimeBefore(String end) {
