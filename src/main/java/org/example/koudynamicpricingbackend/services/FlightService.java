@@ -20,6 +20,7 @@ import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
 import org.example.koudynamicpricingbackend.responses.AirportResponse;
 import org.example.koudynamicpricingbackend.responses.CreateFlightResponse;
 import org.example.koudynamicpricingbackend.responses.FlightResponse;
+import org.example.koudynamicpricingbackend.responses.FlightResponseForPublic;
 import org.example.koudynamicpricingbackend.specifications.FlightSpecifications;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.domain.Specification;
@@ -287,6 +288,45 @@ public class FlightService {
     }
 
 
+    public List<FlightResponseForPublic> searchFlightsForPublic(String departureAirportIataCode, String arrivalAirportIataCode, String departureDate) {
+
+        Specification<Flight> spec = (root, query, cb) -> cb.conjunction();
+
+        if (departureAirportIataCode != null)
+            spec = spec.and(FlightSpecifications.departureAirportIata(arrivalAirportIataCode));
+
+        if (arrivalAirportIataCode != null)
+            spec = spec.and(FlightSpecifications.arrivalAirportIata(arrivalAirportIataCode));
 
 
+        if (departureDate != null)
+            spec = spec.and(FlightSpecifications.departureTime(departureDate));
+
+        System.out.println("********************************0*******************************");
+        System.out.println(departureAirportIataCode);
+        System.out.println(arrivalAirportIataCode);
+        System.out.println(departureDate);
+        System.out.println("********************************0*******************************");
+
+
+        return flightRepository.findAll(spec)
+                .stream()
+                .map(this::mapToFlightResponseForPublic)
+                .toList();
+
+    }
+
+    private FlightResponseForPublic mapToFlightResponseForPublic(Flight flight) {
+        FlightResponseForPublic response = new FlightResponseForPublic();
+        response.setId(flight.getId());
+        response.setFlightNumber(flight.getFlightNumber());
+        response.setDepartureAirport(mapToAirportResponse(flight.getDepartureAirport()));
+        response.setArrivalAirport(mapToAirportResponse(flight.getArrivalAirport()));
+        response.setDepartureTime(flight.getDepartureTime());
+        response.setArrivalTime(flight.getArrivalTime());
+        response.setCurrentPrice(flight.getCurrentPrice());
+        return response;
+
+
+    }
 }
