@@ -39,6 +39,8 @@ public class TicketService {
 
     private final DynamicPricingService dynamicPricingService;
 
+    private final EmailService emailService;
+
     private final PasswordEncoder passwordEncoder;
 
     private static final int PNR_LENGTH = 6;
@@ -129,6 +131,23 @@ public class TicketService {
                         .passengerName(t.getPassenger().getFirstName() + " " + t.getPassenger().getLastName())
                         .build())
                 .toList();
+
+        if (createBookingRequest.getContactEmail() != null && !createBookingRequest.getContactEmail().isEmpty()) {
+
+            String contactName = createBookingRequest.getPassengers().get(0).getFirstName();
+
+            String flightInfo = f.getDepartureAirport().getCity() + " (" + f.getDepartureAirport().getIataCode() + ") -> " +
+                    f.getArrivalAirport().getCity() + " (" + f.getArrivalAirport().getIataCode() + ") on " +
+                    f.getDepartureTime().toLocalDate();
+
+            emailService.sendTicketInfoEmail(
+                    createBookingRequest.getContactEmail(),
+                    contactName,
+                    createdTickets.get(0).getPnr(),
+                    flightInfo,
+                    totalAmount
+            );
+        }
 
         return BuyTicketResponse.builder()
                 .pnr(createdTickets.get(0).getPnr())
