@@ -30,4 +30,7 @@ public class PassengerRequest {
     @NotBlank(message = "Phone number cannot be empty.")
     @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Please enter a valid phone number.")
     private String phone;
+
+    @NotBlank(message = "choosing seat is must!")
+    private String selectedSeatNumber;
 }
