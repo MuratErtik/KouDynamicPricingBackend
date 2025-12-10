@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface FlightRepository extends JpaRepository<Flight, Long>, JpaSpecificationExecutor<Flight> {
 
@@ -15,4 +16,6 @@ public interface FlightRepository extends JpaRepository<Flight, Long>, JpaSpecif
 
     @Query("SELECT f FROM Flight f WHERE f.departureTime > CURRENT_TIMESTAMP")
     List<Flight> findAllFutureFlights();
+
+    Optional<Flight> findFlightById(Long id);
 }
