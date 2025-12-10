@@ -2,6 +2,7 @@ package org.example.koudynamicpricingbackend.services;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.example.koudynamicpricingbackend.configs.HashUtil;
 import org.example.koudynamicpricingbackend.domains.SeatStatus;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.Passenger;
@@ -41,7 +42,7 @@ public class TicketService {
 
     private final EmailService emailService;
 
-    private final PasswordEncoder passwordEncoder;
+    private final HashUtil hashUtil;
 
     private static final int PNR_LENGTH = 6;
 
@@ -84,11 +85,12 @@ public class TicketService {
                     .orElseThrow(() -> new SeatException("Seat number not found for flight " + flight.getId()));
 
 
+            String hashedIdentity = hashUtil.hashIdentityNumber(passengerRequest.getIdentityNumber());
 
             Passenger passenger = Passenger.builder()
                     .firstName(passengerRequest.getFirstName())
                     .lastName(passengerRequest.getLastName())
-                    .identityNumber(passwordEncoder.encode(passengerRequest.getIdentityNumber()))
+                    .identityNumber(hashedIdentity)
                     .email(passengerRequest.getEmail())
                     .phone(passengerRequest.getPhone())
                     .birthDate(passengerRequest.getBirthDate())
