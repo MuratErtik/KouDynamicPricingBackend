@@ -109,5 +109,18 @@ public class GlobalException {
         return new ResponseEntity<>(errorDetail, HttpStatus.BAD_REQUEST);
 
     }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorDetail> handleGlobalException(Exception ex, WebRequest request) {
+        return createErrorResponse("An unexpected error occurred: " + ex.getMessage(), request, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
+    private ResponseEntity<ErrorDetail> createErrorResponse(String message, WebRequest request, HttpStatus status) {
+        ErrorDetail errorDetail = new ErrorDetail();
+        errorDetail.setTimestamp(LocalDateTime.now());
+        errorDetail.setError(message);
+        errorDetail.setDetails(request.getDescription(false));
+        return new ResponseEntity<>(errorDetail, status);
+    }
 
 }
