@@ -87,14 +87,18 @@ public class TicketService {
 
             String hashedIdentity = hashUtil.hashIdentityNumber(passengerRequest.getIdentityNumber());
 
-            Passenger passenger = Passenger.builder()
-                    .firstName(passengerRequest.getFirstName())
-                    .lastName(passengerRequest.getLastName())
-                    .identityNumber(hashedIdentity)
-                    .email(passengerRequest.getEmail())
-                    .phone(passengerRequest.getPhone())
-                    .birthDate(passengerRequest.getBirthDate())
-                    .build();
+
+            Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity)
+                    .orElseGet(() -> Passenger.builder()
+                            .identityNumber(hashedIdentity)
+                            .build());
+
+            passenger.setFirstName(passengerRequest.getFirstName());
+            passenger.setLastName(passengerRequest.getLastName());
+            passenger.setEmail(passengerRequest.getEmail());
+            passenger.setPhone(passengerRequest.getPhone());
+            passenger.setBirthDate(passengerRequest.getBirthDate());
+
             passengerRepository.save(passenger);
 
             seat.setStatus(SeatStatus.BOOKED);
