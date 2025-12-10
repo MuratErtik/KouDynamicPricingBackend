@@ -14,7 +14,7 @@ public class BuyTicketResponse {
     private String pnr;
 
     private String flightNumber;
-    private String route;              // Istanbul (IST) -> Ankara (ESB)
+    private String route;              // like ->Istanbul (IST) -> Ankara (ESB)
     private LocalDateTime departureTime;
     private LocalDateTime arrivalTime;
 
