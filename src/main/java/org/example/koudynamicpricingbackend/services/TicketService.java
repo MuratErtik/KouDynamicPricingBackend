@@ -155,7 +155,8 @@ public class TicketService {
                     createBookingRequest.getContactEmail(),
                     contactName,
                     createdTickets.get(0).getPnr(),
-                    flightInfo,
+                    f,
+                    createdTickets,
                     totalAmount
             );
         }
