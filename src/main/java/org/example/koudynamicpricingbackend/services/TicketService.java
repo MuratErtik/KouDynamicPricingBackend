@@ -1,19 +1,24 @@
 package org.example.koudynamicpricingbackend.services;
 
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.configs.HashUtil;
+import org.example.koudynamicpricingbackend.domains.FlightStatus;
 import org.example.koudynamicpricingbackend.domains.SeatStatus;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.Passenger;
 import org.example.koudynamicpricingbackend.entities.Seat;
 import org.example.koudynamicpricingbackend.entities.Ticket;
 import org.example.koudynamicpricingbackend.exceptions.FlightException;
+import org.example.koudynamicpricingbackend.exceptions.PassengerException;
 import org.example.koudynamicpricingbackend.exceptions.SeatException;
 import org.example.koudynamicpricingbackend.repositories.*;
 import org.example.koudynamicpricingbackend.requests.CreateBookingRequest;
 import org.example.koudynamicpricingbackend.requests.PassengerRequest;
+import org.example.koudynamicpricingbackend.requests.SearchWithPnrNumberRequest;
 import org.example.koudynamicpricingbackend.responses.BuyTicketResponse;
+import org.example.koudynamicpricingbackend.responses.PnrNumberResponse;
 import org.example.koudynamicpricingbackend.responses.TicketDetailResponse;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -185,5 +190,38 @@ public class TicketService {
     }
 
 
+    public PnrNumberResponse searchWithPnrNumber(@Valid SearchWithPnrNumberRequest request) {
 
+        String hashedIdentity = hashUtil.hashIdentityNumber(request.getIdentityNumber());
+
+        Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity).orElseThrow(
+                () -> new PassengerException("Passenger not found with identity number -> " + request.getIdentityNumber())
+        );
+
+        Ticket ticket = ticketRepository.findByPnrAndPassenger(request.getPnr(),passenger).orElseThrow(
+                () -> new SeatException("ticket  not found with pnr number " + request.getPnr())
+        );
+
+        return PnrNumberResponse.builder()
+                .id(ticket.getId())
+                .flightId(ticket.getFlight().getId())
+                .flightNumber(ticket.getFlight().getFlightNumber())
+                .departureAirportId(ticket.getFlight().getDepartureAirport().getId())
+                .departureAirportIataCode(ticket.getFlight().getDepartureAirport().getIataCode())
+                .departureAirportName(ticket.getFlight().getDepartureAirport().getName())
+                .departureAirportCity(ticket.getFlight().getDepartureAirport().getCity())
+                .departureAirportCountry(ticket.getFlight().getDepartureAirport().getCountry())
+                .arrivalAirportId(ticket.getFlight().getArrivalAirport().getId())
+                .arrivalAirportName(ticket.getFlight().getArrivalAirport().getName())
+                .arrivalAirportCity(ticket.getFlight().getArrivalAirport().getCity())
+                .arrivalAirportCountry(ticket.getFlight().getArrivalAirport().getCountry())
+                .arrivalAirportIataCode(ticket.getFlight().getArrivalAirport().getIataCode())
+                .departureTime(ticket.getFlight().getDepartureTime())
+                .arrivalTime(ticket.getFlight().getArrivalTime())
+                .status(ticket.getFlight().getStatus())
+                .seatId(ticket.getSeat().getId())
+                .seatNumber(ticket.getSeat().getSeatNumber())
+                .soldPrice(ticket.getSoldPrice())
+                .build();
+    }
 }
