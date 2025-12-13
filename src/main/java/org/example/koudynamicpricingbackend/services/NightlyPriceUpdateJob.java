@@ -25,11 +25,9 @@ public class NightlyPriceUpdateJob {
      //It going to work at 3.00 AM
      @Scheduled(cron = "0 0 3 * * ?", zone = "Europe/Istanbul")
      public void updateFlightPrices() {
+         log.info("Nightly Price Update Job triggered at: {}", LocalDateTime.now());
 
          try {
-             log.info("Nightly Price Update Job Started...");
-
-
              List<Flight> futureFlights = flightRepository.findAllFutureFlights();
 
              if (futureFlights.isEmpty()) {
@@ -47,7 +45,7 @@ public class NightlyPriceUpdateJob {
                      dynamicPricingService.updatePriceForFlight(flight.getId(), "Nightly Job (Time Decay)");
                      successCount++;
                  } catch (Exception e) {
-                     log.error("Failed to update price for flight ID: {}", flight.getId(), e);
+                     log.error("Failed to update price for flight ID {}: {}", flight.getId(), e.getMessage());
                      errorCount++;
                  }
              }
