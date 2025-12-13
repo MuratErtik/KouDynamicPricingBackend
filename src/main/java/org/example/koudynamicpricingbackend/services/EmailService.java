@@ -4,12 +4,16 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.koudynamicpricingbackend.entities.Flight;
+import org.example.koudynamicpricingbackend.entities.Ticket;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -67,7 +71,7 @@ public class EmailService {
     }
 
     @Async
-    public void sendTicketInfoEmail(String toEmail, String contactName, String pnrCode, String flightInfo, BigDecimal totalPrice) {
+    public void sendTicketInfoEmail(String toEmail, String contactName, String pnrCode, Flight flight, List<Ticket> tickets, BigDecimal totalPrice) {
         try {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -76,56 +80,105 @@ public class EmailService {
             helper.setSubject("Reservation Confirmed! PNR: " + pnrCode + " ✈️");
             helper.setFrom("noreply@kouairlines.com");
 
+            // Tarih ve Saat Formatlayıcılar
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, EEEE"); // 15 Dec 2025, Monday
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm"); // 14:30
+
+            // Yolcu Listesi HTML'ini Dinamik Oluşturma
+            StringBuilder passengerRows = new StringBuilder();
+            for (Ticket ticket : tickets) {
+                passengerRows.append("""
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px; color: #333;">%s %s</td>
+                        <td style="padding: 12px; color: #333; font-weight: bold;">%s</td>
+                        <td style="padding: 12px; color: #555;">%s</td>
+                    </tr>
+                """.formatted(
+                        ticket.getPassenger().getFirstName(),
+                        ticket.getPassenger().getLastName(),
+                        ticket.getSeat().getSeatNumber(),
+                        ticket.getPassenger().getBirthDate()
+                ));
+            }
+
+            // Ana HTML Şablonu
             String htmlContent = """
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
                     
-                    <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #0056b3;">
-                        <h2 style="color: #0056b3; margin: 0;">KOU Airlines</h2>
-                        <p style="color: #666; font-size: 14px; margin-top: 5px;">Your Journey Begins Here</p>
+                    <div style="background-color: #0056b3; padding: 25px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">KOU Airlines</h1>
+                        <p style="color: #e0e0e0; margin: 5px 0 0 0; font-size: 14px;">Booking Confirmation</p>
                     </div>
 
-                    <div style="padding: 20px 0;">
-                        <p>Dear <strong>%s</strong>,</p>
-                        <p>Your flight reservation has been successfully confirmed. Below are your flight details.</p>
+                    <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #eee;">
+                        <p style="margin: 0; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Reservation Code (PNR)</p>
+                        <h2 style="margin: 5px 0 0 0; color: #0056b3; font-size: 32px; letter-spacing: 3px;">%s</h2>
+                        <p style="margin: 5px 0 0 0; color: #28a745; font-weight: bold; font-size: 14px;">✅ Confirmed</p>
                     </div>
 
-                    <div style="background-color: #f8f9fa; border-left: 5px solid #0056b3; padding: 15px; margin: 20px 0;">
-                        <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase;">Reservation Code (PNR)</p>
-                        <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #333; letter-spacing: 2px;">%s</p>
+                    <div style="padding: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div style="text-align: left;">
+                                <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3> <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p> <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p> </div>
+                            <div style="text-align: center; color: #999; font-size: 20px;">
+                                ✈️ 
+                                <div style="font-size: 10px; border-top: 1px dotted #ccc; width: 60px; margin: 5px auto;"></div>
+                                <span style="font-size: 12px; color: #666;">%s</span> </div>
+                            <div style="text-align: right;">
+                                <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3> <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p> <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p> </div>
+                        </div>
+                        
+                        <div style="text-align: center; background: #f1f5f9; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                            📅 <strong>Date:</strong> %s
+                        </div>
+
+                        <h4 style="margin: 0 0 10px 0; color: #555; border-bottom: 2px solid #0056b3; display: inline-block; padding-bottom: 5px;">Passenger Details</h4>
+                        <table style="width: 100%%; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa; color: #666; text-align: left;">
+                                    <th style="padding: 10px;">Name</th>
+                                    <th style="padding: 10px;">Seat</th>
+                                    <th style="padding: 10px;">Birth Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                %s </tbody>
+                        </table>
                     </div>
 
-                    <table style="width: 100%%; border-collapse: collapse; margin-bottom: 20px;">
-                        <tr style="background-color: #f1f1f1;">
-                            <td style="padding: 10px; font-weight: bold; color: #555;">Flight Route:</td>
-                            <td style="padding: 10px; color: #333;">%s</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Total Price:</td>
-                            <td style="padding: 10px; color: #333; border-bottom: 1px solid #eee;">$%s</td>
-                        </tr>
-                    </table>
+                    <div style="background-color: #f8f9fa; padding: 15px 25px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #666; font-weight: bold;">Total Paid:</span>
+                        <span style="color: #0056b3; font-size: 20px; font-weight: bold;">$%s</span>
+                    </div>
 
-                    <p style="text-align: center; margin-top: 30px;">
-                        <a href="http://localhost:3000/my-flights" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                            Manage Booking
-                        </a>
-                    </p>
-
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
-                    <p style="text-align: center; color: #999; font-size: 12px;">
-                        © 2025 KOU Airlines Dynamic Pricing Project<br>
-                        Have a safe flight!
-                    </p>
+                    <div style="padding: 20px; text-align: center; background-color: #ffffff;">
+                        <a href="http://localhost:3000/my-flights" style="display: inline-block; background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px;">Manage My Booking</a>
+                        <p style="margin-top: 20px; color: #999; font-size: 12px;">
+                            © 2025 KOU Airlines. All rights reserved.<br>
+                            Umuttepe Campus, Kocaeli, TR
+                        </p>
+                    </div>
                 </div>
-                """.formatted(contactName, pnrCode, flightInfo, totalPrice.toString());
+            """.formatted(
+                    pnrCode,
+                    flight.getDepartureAirport().getIataCode(), // IST
+                    flight.getDepartureAirport().getCity(),
+                    flight.getDepartureTime().format(timeFormatter),
+                    "Direct",
+                    flight.getArrivalAirport().getIataCode(),   // ESB
+                    flight.getArrivalAirport().getCity(),
+                    flight.getArrivalTime().format(timeFormatter),
+                    flight.getDepartureTime().format(dateFormatter),
+                    passengerRows.toString(), // Tablo satırlarını buraya gömüyoruz
+                    totalPrice.toString()
+            );
 
             helper.setText(htmlContent, true);
-
             javaMailSender.send(mimeMessage);
-            log.info("Ticket confirmation email sent successfully to: {}", toEmail);
+            log.info("Rich ticket email sent to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("Failed to send ticket email to {}", toEmail, e);
+            log.error("Failed to send email to {}", toEmail, e);
         }
     }
 }
