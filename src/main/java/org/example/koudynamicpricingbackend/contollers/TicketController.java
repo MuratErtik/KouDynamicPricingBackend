@@ -3,7 +3,9 @@ package org.example.koudynamicpricingbackend.contollers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.requests.CreateBookingRequest;
+import org.example.koudynamicpricingbackend.requests.SearchWithPnrNumberRequest;
 import org.example.koudynamicpricingbackend.responses.BuyTicketResponse;
+import org.example.koudynamicpricingbackend.responses.PnrNumberResponse;
 import org.example.koudynamicpricingbackend.services.TicketService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,4 +24,14 @@ public class TicketController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/searchFlightInfo")
+    public ResponseEntity<PnrNumberResponse> buyTicket(@RequestBody @Valid SearchWithPnrNumberRequest request) {
+
+        PnrNumberResponse response = ticketService.searchWithPnrNumber(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }
