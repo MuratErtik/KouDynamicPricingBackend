@@ -11,6 +11,8 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     List<Seat> findByFlightIdOrderByIdAsc(Long flightId);
 
+    Optional<List<Seat>> findAllByFlightIdOrderByIdAsc(Long flight_id);
+
     void deleteByFlightId(Long flightId);
 
     Optional<List<Seat>> findByFlightAndSeatNumberIn(Flight flight, List<String> seats);
