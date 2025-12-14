@@ -11,6 +11,8 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
+ENV TZ=Europe/Istanbul
+
 COPY --from=build /app/target/*.jar app.jar
 
 ENV SERVER_PORT=8080
