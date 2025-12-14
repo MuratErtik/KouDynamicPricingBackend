@@ -9,24 +9,20 @@ import org.example.koudynamicpricingbackend.domains.SeatStatus;
 import org.example.koudynamicpricingbackend.entities.Airport;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.Seat;
+import org.example.koudynamicpricingbackend.entities.Ticket;
 import org.example.koudynamicpricingbackend.exceptions.AirportException;
 import org.example.koudynamicpricingbackend.exceptions.FlightException;
-import org.example.koudynamicpricingbackend.repositories.AirportRepository;
-import org.example.koudynamicpricingbackend.repositories.FlightRepository;
-import org.example.koudynamicpricingbackend.repositories.PriceHistoryRepository;
-import org.example.koudynamicpricingbackend.repositories.SeatRepository;
+import org.example.koudynamicpricingbackend.repositories.*;
 import org.example.koudynamicpricingbackend.requests.CreateFlightRequest;
 import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
-import org.example.koudynamicpricingbackend.responses.AirportResponse;
-import org.example.koudynamicpricingbackend.responses.CreateFlightResponse;
-import org.example.koudynamicpricingbackend.responses.FlightResponse;
-import org.example.koudynamicpricingbackend.responses.FlightResponseForPublic;
+import org.example.koudynamicpricingbackend.responses.*;
 import org.example.koudynamicpricingbackend.specifications.FlightSpecifications;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +44,7 @@ public class FlightService {
     private final PriceHistoryRepository priceHistoryRepository;
 
     private static final Integer FIX_TOTAL_SEATS = 60;
+    private final TicketRepository ticketRepository;
 
     //C+RUD
 
@@ -329,4 +326,50 @@ public class FlightService {
 
 
     }
+
+    public  List<CustomersFromFlightResponse> getCustomersByFlightId(Long flightId) {
+
+        Flight flight = flightRepository.findById(flightId)
+                .orElseThrow(() -> new FlightException("Flight not found"));
+
+        List<Ticket>  tickets = ticketRepository.findAllByFlightOrderByIdAsc(flight)
+                .orElseThrow(() -> new FlightException("Ticket not found"));
+
+
+        return tickets.stream().map(this::mapToCustomersFromFlightResponse).toList();
+
+    }
+
+    private CustomersFromFlightResponse mapToCustomersFromFlightResponse(Ticket ticket) {
+        CustomersFromFlightResponse response = new CustomersFromFlightResponse();
+        response.setId(ticket.getId());
+        response.setPnr(ticket.getPnr());
+        response.setPassenger(mapToTicketPassengerResponse(ticket));
+        response.setSeat(mapToSeatResponseForTicket(ticket));
+        response.setSoldPrice(ticket.getSoldPrice());
+        response.setPurchaseDate(ticket.getPurchaseDate());
+        return response;
+
+    }
+
+    private TicketPassengerResponse mapToTicketPassengerResponse(Ticket ticket) {
+        TicketPassengerResponse response = new TicketPassengerResponse();
+        response.setId(ticket.getPassenger().getId());
+        response.setFirstName(ticket.getPassenger().getFirstName());
+        response.setLastName(ticket.getPassenger().getLastName());
+        response.setEmail(ticket.getPassenger().getEmail());
+        response.setBirthDate(ticket.getPassenger().getBirthDate());
+        response.setPhone(ticket.getPassenger().getPhone());
+        return response;
+
+    }
+
+    private SeatResponseForTicket mapToSeatResponseForTicket(Ticket ticket) {
+        SeatResponseForTicket response = new SeatResponseForTicket();
+        response.setId(ticket.getSeat().getId());
+        response.setSeatNumber(ticket.getSeat().getSeatNumber());
+        return response;
+    }
+
+
 }
