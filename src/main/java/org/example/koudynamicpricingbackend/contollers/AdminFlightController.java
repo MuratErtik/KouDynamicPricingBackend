@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.koudynamicpricingbackend.requests.CreateFlightRequest;
 import org.example.koudynamicpricingbackend.requests.UpdateFlightRequest;
 import org.example.koudynamicpricingbackend.responses.CreateFlightResponse;
+import org.example.koudynamicpricingbackend.responses.CustomersFromFlightResponse;
 import org.example.koudynamicpricingbackend.responses.FlightResponse;
 import org.example.koudynamicpricingbackend.services.FlightService;
 import org.springframework.http.HttpStatus;
@@ -92,5 +93,12 @@ public class AdminFlightController {
                 )
         );
     }
+
+    @GetMapping("/{flightId}/customer-list")
+    public ResponseEntity<List<CustomersFromFlightResponse>> getCustomersByFlightId(@PathVariable Long flightId) {
+        return ResponseEntity.ok(flightService.getCustomersByFlightId(flightId));
+    }
+
+
 
 }
