@@ -24,9 +24,12 @@ public class PublicFlightController {
     public ResponseEntity<List<FlightResponseForPublic>> searchFlightsForPublic(
             @RequestParam(required = false) String departureAirportIataCode,
             @RequestParam(required = false) String arrivalAirportIataCode,
-            @RequestParam(required = false) String departureDate) {
+            @RequestParam(required = false) String departureDate,
+            @RequestParam(defaultValue = "false") boolean isRoundTrip
 
-        return ResponseEntity.ok(flightService.searchFlightsForPublic(departureAirportIataCode,arrivalAirportIataCode,departureDate));
+    ) {
+
+        return ResponseEntity.ok(flightService.searchFlightsForPublic(departureAirportIataCode,arrivalAirportIataCode,departureDate,isRoundTrip));
     }
 
 
