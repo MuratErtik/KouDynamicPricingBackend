@@ -28,7 +28,7 @@ public class Ticket {
     @JoinColumn(name = "flight_id", nullable = false)
     private Flight flight;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "passenger_id", nullable = false)
     private Passenger passenger;
 
