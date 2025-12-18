@@ -22,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,7 +45,10 @@ public class FlightService {
     private final PriceHistoryRepository priceHistoryRepository;
 
     private static final Integer FIX_TOTAL_SEATS = 60;
+
     private final TicketRepository ticketRepository;
+
+    private static final Integer DISCOUNT_RATE_FOR_ROUND_TRIP = 10;
 
     //C+RUD
 
@@ -285,7 +289,7 @@ public class FlightService {
     }
 
 
-    public List<FlightResponseForPublic> searchFlightsForPublic(String departureAirportIataCode, String arrivalAirportIataCode, String departureDate) {
+    public List<FlightResponseForPublic> searchFlightsForPublic(String departureAirportIataCode, String arrivalAirportIataCode, String departureDate,boolean isRoundTrip) {
 
         Specification<Flight> spec = (root, query, cb) -> cb.conjunction();
 
@@ -299,21 +303,21 @@ public class FlightService {
         if (departureDate != null)
             spec = spec.and(FlightSpecifications.departureTime(departureDate));
 
-        System.out.println("********************************0*******************************");
-        System.out.println(departureAirportIataCode);
-        System.out.println(arrivalAirportIataCode);
-        System.out.println(departureDate);
-        System.out.println("********************************0*******************************");
+//        System.out.println("********************************0*******************************");
+//        System.out.println(departureAirportIataCode);
+//        System.out.println(arrivalAirportIataCode);
+//        System.out.println(departureDate);
+//        System.out.println("********************************0*******************************");
 
 
         return flightRepository.findAll(spec)
                 .stream()
-                .map(this::mapToFlightResponseForPublic)
+                .map(flight -> mapToFlightResponseForPublic(flight, isRoundTrip))
                 .toList();
 
     }
 
-    private FlightResponseForPublic mapToFlightResponseForPublic(Flight flight) {
+    private FlightResponseForPublic mapToFlightResponseForPublic(Flight flight,boolean isRoundTrip) {
         FlightResponseForPublic response = new FlightResponseForPublic();
         response.setId(flight.getId());
         response.setFlightNumber(flight.getFlightNumber());
@@ -322,10 +326,24 @@ public class FlightService {
         response.setDepartureTime(flight.getDepartureTime());
         response.setArrivalTime(flight.getArrivalTime());
         response.setCurrentPrice(flight.getCurrentPrice());
+        response.setDiscountPrice(discountForRoundTrip(flight.getCurrentPrice(),isRoundTrip));
         return response;
 
 
     }
+
+    public BigDecimal discountForRoundTrip(BigDecimal currentPrice, boolean isRoundTrip) {
+        if (!isRoundTrip) {
+            return null;
+        }
+
+        BigDecimal discountAmount = currentPrice
+                .multiply(BigDecimal.valueOf(DISCOUNT_RATE_FOR_ROUND_TRIP))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        return currentPrice.subtract(discountAmount);
+    }
+
 
     public  List<CustomersFromFlightResponse> getCustomersByFlightId(Long flightId) {
 
