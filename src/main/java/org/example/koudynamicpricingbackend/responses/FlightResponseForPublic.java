@@ -23,4 +23,6 @@ public class FlightResponseForPublic {
 
     private BigDecimal currentPrice;
 
+    private BigDecimal discountPrice;
+
 }
