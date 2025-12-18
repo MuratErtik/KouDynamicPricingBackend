@@ -18,6 +18,7 @@ import org.example.koudynamicpricingbackend.requests.CreateBookingRequest;
 import org.example.koudynamicpricingbackend.requests.PassengerRequest;
 import org.example.koudynamicpricingbackend.requests.SearchWithPnrNumberRequest;
 import org.example.koudynamicpricingbackend.responses.BuyTicketResponse;
+import org.example.koudynamicpricingbackend.responses.EmailTicketResponse;
 import org.example.koudynamicpricingbackend.responses.PnrNumberResponse;
 import org.example.koudynamicpricingbackend.responses.TicketDetailResponse;
 import org.springframework.data.annotation.CreatedBy;
@@ -55,124 +56,200 @@ public class TicketService {
 
     private static final SecureRandom random = new SecureRandom();
 
+    private final FlightService flightService;
+
 
 
     @Transactional
     public BuyTicketResponse buyTicket(CreateBookingRequest createBookingRequest) {
 
-        Flight flight = flightRepository.findById(createBookingRequest.getFlightId())
-                .orElseThrow(() -> new FlightException("Flight not found with id: " + createBookingRequest.getFlightId()));
+        Flight outboundFlight = flightRepository.findById(createBookingRequest.getOutboundFlightId())
+                .orElseThrow(() -> new FlightException("Outbound flight not found!"));
 
-        List<String> selectedSeatsFromPassenger = createBookingRequest.getPassengers().stream()
-                .map(PassengerRequest::getSelectedSeatNumber)
-                .toList();
-
-        List<Seat> seats = seatRepository.findByFlightAndSeatNumberIn(flight,selectedSeatsFromPassenger)
-                .orElseThrow(() -> new SeatException("Seat number not found for flight " + flight.getId()));
-
-        if (seats.size() != selectedSeatsFromPassenger.size()) throw new SeatException("Some selected seats do not exist in this flight!");
-
-        for (Seat seat : seats) {
-
-            if (seat.getStatus() != SeatStatus.AVAILABLE) throw new SeatException("Seat " + seat.getSeatNumber() + " was just taken by another user! Please select another.");
-
+        Flight returnFlight;
+        if (createBookingRequest.getReturnFlightId() != null) {
+            returnFlight = flightRepository.findById(createBookingRequest.getReturnFlightId())
+                    .orElseThrow(() -> new FlightException("Return flight not found!"));
+        } else {
+            returnFlight = null;
         }
+
+        boolean isRoundTrip = (returnFlight != null);
 
         String pnrCode = generatePNR();
 
-        List<Ticket> createdTickets = new ArrayList<>();
+        List<Ticket> outboundTickets = processFlightBooking(
+                outboundFlight,
+                createBookingRequest.getPassengers(),
+                pnrCode,
+                true, // isOutbound = true
+                isRoundTrip
+        );
 
-        for(PassengerRequest passengerRequest : createBookingRequest.getPassengers()) {
+        List<Ticket> allCreatedTickets = new ArrayList<>(outboundTickets);
 
-            Seat seat = seats.stream()
-                    .filter(s -> s.getSeatNumber().equals(passengerRequest.getSelectedSeatNumber()))
-                    .findFirst()
-                    .orElseThrow(() -> new SeatException("Seat number not found for flight " + flight.getId()));
-
-
-            String hashedIdentity = hashUtil.hashIdentityNumber(passengerRequest.getIdentityNumber());
-
-
-            Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity)
-                    .orElseGet(() -> Passenger.builder()
-                            .identityNumber(hashedIdentity)
-                            .build());
-
-            passenger.setFirstName(passengerRequest.getFirstName());
-            passenger.setLastName(passengerRequest.getLastName());
-            passenger.setEmail(passengerRequest.getEmail());
-            passenger.setPhone(passengerRequest.getPhone());
-            passenger.setBirthDate(passengerRequest.getBirthDate());
-
-            passengerRepository.save(passenger);
-
-            seat.setStatus(SeatStatus.BOOKED);
-            seatRepository.save(seat);
-
-            Ticket ticket = Ticket.builder()
-                    .pnr(pnrCode)
-                    .flight(flight)
-                    .passenger(passenger)
-                    .seat(seat)
-                    .soldPrice(flight.getCurrentPrice())
-                    .purchaseDate(LocalDateTime.now())
-                    .build();
-            ticketRepository.save(ticket);
-
-            flight.setRemainingSeats(flight.getRemainingSeats() - 1);
-            createdTickets.add(ticket);
-
-
-
+        if (isRoundTrip) {
+            List<Ticket> returnTickets = processFlightBooking(
+                    returnFlight,
+                    createBookingRequest.getPassengers(),
+                    pnrCode,
+                    false, // isOutbound = false
+                    isRoundTrip
+            );
+            allCreatedTickets.addAll(returnTickets);
         }
 
-        flightRepository.save(flight);
-        dynamicPricingService.updatePriceForFlight(flight.getId(), "Ticket Sold");
-
-        BigDecimal totalAmount = createdTickets.stream()
+        BigDecimal totalAmount = allCreatedTickets.stream()
                 .map(Ticket::getSoldPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Flight f = createdTickets.get(0).getFlight();
+        List<TicketDetailResponse> detailDtos = allCreatedTickets.stream()
+                .map(t -> {
+                    TicketDetailResponse.TicketDetailResponseBuilder builder =
+                            TicketDetailResponse.builder()
+                                    .ticketId(t.getId())
+                                    .seatNumber(t.getSeat().getSeatNumber())
+                                    .outboundFlightNumber(outboundFlight.getFlightNumber())
+                                    .passengerName(
+                                            t.getPassenger().getFirstName() + " " +
+                                                    t.getPassenger().getLastName()
+                                    );
 
-        List<TicketDetailResponse> detailDtos = createdTickets.stream()
-                .map(t -> TicketDetailResponse.builder()
-                        .ticketId(t.getId())
-                        .seatNumber(t.getSeat().getSeatNumber())
-                        .passengerName(t.getPassenger().getFirstName() + " " + t.getPassenger().getLastName())
-                        .build())
+                    if (returnFlight != null) {
+                        builder.returnFlightNumber(returnFlight.getFlightNumber());
+                    }
+
+                    return builder.build();
+                })
                 .toList();
 
-        if (createBookingRequest.getContactEmail() != null && !createBookingRequest.getContactEmail().isEmpty()) {
 
+        if (createBookingRequest.getContactEmail() != null && !createBookingRequest.getContactEmail().isEmpty()) {
             String contactName = createBookingRequest.getPassengers().get(0).getFirstName();
 
-            String flightInfo = f.getDepartureAirport().getCity() + " (" + f.getDepartureAirport().getIataCode() + ") -> " +
-                    f.getArrivalAirport().getCity() + " (" + f.getArrivalAirport().getIataCode() + ") on " +
-                    f.getDepartureTime().toLocalDate();
+            List<EmailTicketResponse> emailTicketList = new ArrayList<>();
+
+            for (PassengerRequest req : createBookingRequest.getPassengers()) {
+
+                String rawId = req.getIdentityNumber();
+                String maskedId = rawId.substring(0, 2) + "*******" + rawId.substring(rawId.length() - 2);
+                String fullName = req.getFirstName() + " " + req.getLastName();
+
+                emailTicketList.add(EmailTicketResponse.builder()
+                        .passengerName(fullName)
+                        .seatNumber(req.getOutboundSeatNumber())
+                        .maskedIdentity(maskedId)
+                        .build());
+
+                if (createBookingRequest.getReturnFlightId() != null) {
+                    emailTicketList.add(EmailTicketResponse.builder()
+                            .passengerName(fullName)
+                            .seatNumber(req.getReturnSeatNumber())
+                            .maskedIdentity(maskedId)
+                            .build());
+                }
+            }
 
             emailService.sendTicketInfoEmail(
                     createBookingRequest.getContactEmail(),
                     contactName,
-                    createdTickets.get(0).getPnr(),
-                    f,
-                    createdTickets,
+                    pnrCode,
+                    outboundFlight, // Gidiş Uçuşu
+                    returnFlight,   // Dönüş Uçuşu (Yoksa null gider, sorun değil)
+                    emailTicketList, // <--- ARTIK HATA VERMEZ
                     totalAmount
             );
         }
 
         return BuyTicketResponse.builder()
-                .pnr(createdTickets.get(0).getPnr())
-                .flightNumber(f.getFlightNumber())
-                .route(f.getDepartureAirport().getCity() + " (" + f.getDepartureAirport().getIataCode() + ") -> " +
-                        f.getArrivalAirport().getCity() + " (" + f.getArrivalAirport().getIataCode() + ")")
-                .departureTime(f.getDepartureTime())
-                .arrivalTime(f.getArrivalTime())
+                .pnr(pnrCode)
+                .flightNumber(outboundFlight.getFlightNumber())
+                .route(outboundFlight.getDepartureAirport().getCity() + " -> " + outboundFlight.getArrivalAirport().getCity())
+                .departureTime(outboundFlight.getDepartureTime())
+                .arrivalTime(outboundFlight.getArrivalTime())
                 .totalPrice(totalAmount)
-                .passengerCount(createdTickets.size())
+                .passengerCount(allCreatedTickets.size()) // Toplam bilet sayısı
                 .tickets(detailDtos)
                 .build();
+    }
 
+
+    private List<Ticket> processFlightBooking(Flight flight, List<PassengerRequest> passengerRequests, String pnrCode, boolean isOutbound, boolean isRoundTrip) {
+
+        List<String> requestedSeats = passengerRequests.stream()
+                .map(p -> isOutbound ? p.getOutboundSeatNumber() : p.getReturnSeatNumber())
+                .toList();
+
+        List<Seat> seats = seatRepository.findByFlightAndSeatNumberIn(flight, requestedSeats)
+                .orElseThrow(() -> new SeatException("Seats lookup failed for flight " + flight.getId()));
+
+        if (seats.size() != requestedSeats.size()) {
+            throw new SeatException("Some selected seats do not exist in flight " + flight.getFlightNumber());
+        }
+
+        for (Seat seat : seats) {
+            if (seat.getStatus() != SeatStatus.AVAILABLE) {
+                throw new SeatException("Seat " + seat.getSeatNumber() + " is already taken on flight " + flight.getFlightNumber());
+            }
+        }
+
+        List<Ticket> tickets = new ArrayList<>();
+
+        for (PassengerRequest pReq : passengerRequests) {
+
+            String targetSeatNum = isOutbound ? pReq.getOutboundSeatNumber() : pReq.getReturnSeatNumber();
+            Seat seat = seats.stream()
+                    .filter(s -> s.getSeatNumber().equals(targetSeatNum))
+                    .findFirst()
+                    .orElseThrow(() -> new SeatException("Seat mismatch logic error."));
+
+            // 2. Yolcuyu Bul veya Oluştur
+            String hashedIdentity = hashUtil.hashIdentityNumber(pReq.getIdentityNumber());
+
+            Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity)
+                    .orElseGet(() -> Passenger.builder().identityNumber(hashedIdentity).build());
+
+            // Bilgileri her zaman güncelle
+            passenger.setFirstName(pReq.getFirstName());
+            passenger.setLastName(pReq.getLastName());
+            passenger.setEmail(pReq.getEmail());
+            passenger.setPhone(pReq.getPhone());
+            passenger.setBirthDate(pReq.getBirthDate());
+            passengerRepository.save(passenger);
+
+            // 3. Koltuğu Güncelle
+            seat.setStatus(SeatStatus.BOOKED); // veya SOLD
+            seatRepository.save(seat);
+
+            // 4. Fiyatı Hesapla (İndirimli mi?)
+            // flightService.discountForRoundTrip metodunun var olduğunu varsayıyorum.
+            // Yoksa: flight.getCurrentPrice().multiply(isRoundTrip ? BigDecimal.valueOf(0.9) : BigDecimal.ONE);
+            BigDecimal finalPrice = flightService.discountForRoundTrip(flight.getCurrentPrice(), isRoundTrip);
+            if (finalPrice==null) {
+                finalPrice=flight.getCurrentPrice();
+            }
+
+            // 5. Bileti Kaydet
+            Ticket ticket = Ticket.builder()
+                    .pnr(pnrCode)
+                    .flight(flight)
+                    .passenger(passenger)
+                    .seat(seat)
+                    .soldPrice(finalPrice)
+                    .purchaseDate(LocalDateTime.now())
+                    .build();
+            ticketRepository.save(ticket);
+
+            // 6. Uçuş Kapasitesini Düşür
+            flight.setRemainingSeats(flight.getRemainingSeats() - 1);
+            tickets.add(ticket);
+        }
+
+        // E. Uçuşu Kaydet ve Fiyat Motorunu Tetikle
+        flightRepository.save(flight);
+        dynamicPricingService.updatePriceForFlight(flight.getId(), "Ticket Sold");
+
+        return tickets;
     }
 
     private String generatePNR() {
