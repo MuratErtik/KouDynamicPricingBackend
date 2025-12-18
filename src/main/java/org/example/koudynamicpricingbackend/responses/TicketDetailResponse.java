@@ -8,6 +8,8 @@ import lombok.Data;
 public class TicketDetailResponse {
 
     private Long ticketId;
+    private String outboundFlightNumber;
+    private String returnFlightNumber;
     private String seatNumber;
     private String passengerName;
     private String passengerLastName;
