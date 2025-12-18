@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.koudynamicpricingbackend.entities.Flight;
 import org.example.koudynamicpricingbackend.entities.Ticket;
+import org.example.koudynamicpricingbackend.responses.EmailTicketResponse;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -71,7 +72,9 @@ public class EmailService {
     }
 
     @Async
-    public void sendTicketInfoEmail(String toEmail, String contactName, String pnrCode, Flight flight, List<Ticket> tickets, BigDecimal totalPrice) {
+    public void sendTicketInfoEmail(String toEmail, String contactName, String pnrCode,
+                                    Flight outboundFlight, Flight returnFlight,
+                                    List<EmailTicketResponse> tickets, BigDecimal totalPrice) {
         try {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -80,28 +83,38 @@ public class EmailService {
             helper.setSubject("Reservation Confirmed! PNR: " + pnrCode + " ✈️");
             helper.setFrom("noreply@kouairlines.com");
 
-            // Tarih ve Saat Formatlayıcılar
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, EEEE"); // 15 Dec 2025, Monday
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm"); // 14:30
+            // Formatlayıcılar
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, EEEE");
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-            // Yolcu Listesi HTML'ini Dinamik Oluşturma
+            // 1. UÇUŞ DETAYLARI HTML (Gidiş + Varsa Dönüş)
+            StringBuilder flightsHtml = new StringBuilder();
+
+            // Gidiş Uçuşunu Ekle
+            flightsHtml.append(generateFlightHtml(outboundFlight, "Outbound Flight", dateFormatter, timeFormatter));
+
+            // Eğer Dönüş Uçuşu Varsa Onu da Ekle
+            if (returnFlight != null) {
+                flightsHtml.append(generateFlightHtml(returnFlight, "Return Flight", dateFormatter, timeFormatter));
+            }
+
+            // 2. YOLCU LISTESI HTML (DTO Kullanarak)
             StringBuilder passengerRows = new StringBuilder();
-            for (Ticket ticket : tickets) {
+            for (EmailTicketResponse ticket : tickets) {
                 passengerRows.append("""
                     <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px; color: #333;">%s %s</td>
+                        <td style="padding: 12px; color: #333;">%s</td>
                         <td style="padding: 12px; color: #333; font-weight: bold;">%s</td>
                         <td style="padding: 12px; color: #555;">%s</td>
                     </tr>
                 """.formatted(
-                        ticket.getPassenger().getFirstName(),
-                        ticket.getPassenger().getLastName(),
-                        ticket.getSeat().getSeatNumber(),
-                        ticket.getPassenger().getBirthDate()
+                        ticket.getPassengerName(),
+                        ticket.getSeatNumber(),
+                        ticket.getMaskedIdentity() // Artık Hash yok, maskelenmiş veri var
                 ));
             }
 
-            // Ana HTML Şablonu
+            // 3. ANA ŞABLON
             String htmlContent = """
                 <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
                     
@@ -117,32 +130,21 @@ public class EmailService {
                     </div>
 
                     <div style="padding: 25px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <div style="text-align: left;">
-                                <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3> <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p> <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p> </div>
-                            <div style="text-align: center; color: #999; font-size: 20px;">
-                                ✈️ 
-                                <div style="font-size: 10px; border-top: 1px dotted #ccc; width: 60px; margin: 5px auto;"></div>
-                                <span style="font-size: 12px; color: #666;">%s</span> </div>
-                            <div style="text-align: right;">
-                                <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3> <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p> <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p> </div>
-                        </div>
                         
-                        <div style="text-align: center; background: #f1f5f9; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-                            📅 <strong>Date:</strong> %s
-                        </div>
+                        %s
 
-                        <h4 style="margin: 0 0 10px 0; color: #555; border-bottom: 2px solid #0056b3; display: inline-block; padding-bottom: 5px;">Passenger Details</h4>
+                        <h4 style="margin: 20px 0 10px 0; color: #555; border-bottom: 2px solid #0056b3; display: inline-block; padding-bottom: 5px;">Passenger Details</h4>
                         <table style="width: 100%%; border-collapse: collapse; font-size: 14px;">
                             <thead>
                                 <tr style="background-color: #f8f9fa; color: #666; text-align: left;">
                                     <th style="padding: 10px;">Name</th>
                                     <th style="padding: 10px;">Seat</th>
-                                    <th style="padding: 10px;">Birth Date</th>
+                                    <th style="padding: 10px;">Identity</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                %s </tbody>
+                                %s 
+                            </tbody>
                         </table>
                     </div>
 
@@ -161,15 +163,8 @@ public class EmailService {
                 </div>
             """.formatted(
                     pnrCode,
-                    flight.getDepartureAirport().getIataCode(), // IST
-                    flight.getDepartureAirport().getCity(),
-                    flight.getDepartureTime().format(timeFormatter),
-                    "Direct",
-                    flight.getArrivalAirport().getIataCode(),   // ESB
-                    flight.getArrivalAirport().getCity(),
-                    flight.getArrivalTime().format(timeFormatter),
-                    flight.getDepartureTime().format(dateFormatter),
-                    passengerRows.toString(), // Tablo satırlarını buraya gömüyoruz
+                    flightsHtml.toString(),
+                    passengerRows.toString(),
                     totalPrice.toString()
             );
 
@@ -180,5 +175,43 @@ public class EmailService {
         } catch (MessagingException e) {
             log.error("Failed to send email to {}", toEmail, e);
         }
+    }
+
+
+    private String generateFlightHtml(Flight flight, String title, DateTimeFormatter dateFormatter, DateTimeFormatter timeFormatter) {
+        return """
+            <div style="margin-bottom: 25px; border: 1px solid #eee; border-radius: 5px; padding: 15px;">
+                <p style="margin: 0 0 10px 0; color: #0056b3; font-weight: bold; font-size: 12px; text-transform: uppercase;">%s</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="text-align: left;">
+                        <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p>
+                        <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p>
+                    </div>
+                    <div style="text-align: center; color: #999; font-size: 20px;">
+                        ✈️
+                        <div style="font-size: 10px; border-top: 1px dotted #ccc; width: 60px; margin: 5px auto;"></div>
+                        <span style="font-size: 12px; color: #666;">Direct</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <h3 style="margin: 0; font-size: 24px; color: #333;">%s</h3>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">%s</p>
+                        <p style="margin: 5px 0 0 0; color: #0056b3; font-weight: bold; font-size: 18px;">%s</p>
+                    </div>
+                </div>
+                <div style="text-align: center; background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 15px; font-size: 13px;">
+                    📅 <strong>Date:</strong> %s
+                </div>
+            </div>
+        """.formatted(
+                title, // "Outbound Flight" or "Return Flight"
+                flight.getDepartureAirport().getIataCode(),
+                flight.getDepartureAirport().getCity(),
+                flight.getDepartureTime().format(timeFormatter),
+                flight.getArrivalAirport().getIataCode(),
+                flight.getArrivalAirport().getCity(),
+                flight.getArrivalTime().format(timeFormatter),
+                flight.getDepartureTime().format(dateFormatter)
+        );
     }
 }
