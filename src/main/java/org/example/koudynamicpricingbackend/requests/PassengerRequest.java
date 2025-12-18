@@ -32,5 +32,7 @@ public class PassengerRequest {
     private String phone;
 
     @NotBlank(message = "choosing seat is must!")
-    private String selectedSeatNumber;
+    private String outboundSeatNumber;
+
+    private String returnSeatNumber;
 }
