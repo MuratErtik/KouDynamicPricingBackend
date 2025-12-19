@@ -214,4 +214,66 @@ public class EmailService {
                 flight.getDepartureTime().format(dateFormatter)
         );
     }
+
+    @Async
+    public void sendCancellationEmail(String toEmail, String contactName, String pnrCode, BigDecimal refundAmount) {
+        try {
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("Ticket Cancelled - PNR: " + pnrCode);
+            helper.setFrom("noreply@kouairlines.com");
+
+            String htmlContent = """
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
+                    
+                    <div style="background-color: #d9534f; padding: 25px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">KOU Airlines</h1>
+                        <p style="color: #f8d7da; margin: 5px 0 0 0; font-size: 14px;">Cancellation Notice</p>
+                    </div>
+
+                    <div style="background-color: #fdf2f2; padding: 20px; text-align: center; border-bottom: 1px solid #eee;">
+                        <p style="margin: 0; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Cancelled PNR</p>
+                        <h2 style="margin: 5px 0 0 0; color: #d9534f; font-size: 32px; letter-spacing: 3px;">%s</h2>
+                        <p style="margin: 10px 0 0 0; color: #c0392b; font-weight: bold; font-size: 14px;">❌ Reservation Cancelled</p>
+                    </div>
+
+                    <div style="padding: 30px 25px;">
+                        <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>%s</strong>,</p>
+                        
+                        <p style="color: #555; line-height: 1.6;">
+                            Your flight reservation associated with the PNR code above has been successfully <strong>cancelled</strong> as per your request.
+                        </p>
+
+                        <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0;">
+                            <p style="margin: 0; color: #856404; font-size: 14px;">
+                                <strong>Refund Process:</strong><br>
+                                A total amount of <strong>$%s</strong> will be refunded to your original payment method within 3-7 business days.
+                            </p>
+                        </div>
+
+                        <p style="color: #999; font-size: 13px; margin-top: 20px;">
+                            If you did not request this cancellation, please contact our support team immediately.
+                        </p>
+                    </div>
+
+                    <div style="padding: 20px; text-align: center; background-color: #f8f9fa; border-top: 1px solid #eee;">
+                        <a href="http://localhost:3000" style="text-decoration: none; color: #0056b3; font-weight: bold; font-size: 14px;">Book a New Flight</a>
+                        <p style="margin-top: 15px; color: #999; font-size: 12px;">
+                            © 2025 KOU Airlines. All rights reserved.<br>
+                            Umuttepe Campus, Kocaeli, TR
+                        </p>
+                    </div>
+                </div>
+            """.formatted(pnrCode, contactName, refundAmount.toString());
+
+            helper.setText(htmlContent, true);
+            javaMailSender.send(mimeMessage);
+            log.info("Cancellation email sent to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send cancellation email to {}", toEmail, e);
+        }
+    }
 }
