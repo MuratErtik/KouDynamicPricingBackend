@@ -2,9 +2,11 @@ package org.example.koudynamicpricingbackend.contollers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.koudynamicpricingbackend.requests.CancelTicketRequest;
 import org.example.koudynamicpricingbackend.requests.CreateBookingRequest;
 import org.example.koudynamicpricingbackend.requests.SearchWithPnrNumberRequest;
 import org.example.koudynamicpricingbackend.responses.BuyTicketResponse;
+import org.example.koudynamicpricingbackend.responses.CancelTicketResponse;
 import org.example.koudynamicpricingbackend.responses.PnrNumberResponse;
 import org.example.koudynamicpricingbackend.services.TicketService;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,12 @@ public class TicketController {
 
         PnrNumberResponse response = ticketService.searchWithPnrNumber(request);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<CancelTicketResponse> cancelTicket(@RequestBody @Valid CancelTicketRequest request) {
+        CancelTicketResponse response = ticketService.cancelTicket(request);
         return ResponseEntity.ok(response);
     }
 
