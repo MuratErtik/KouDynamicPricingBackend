@@ -271,6 +271,10 @@ public class TicketService {
                 () -> new SeatException("ticket  not found with pnr number " + request.getPnr())
         );
 
+        if (ticket.isCancelled()){
+            throw new FlightException("Ticket is cancelled already!");
+        }
+
         return PnrNumberResponse.builder()
                 .id(ticket.getId())
                 .flightId(ticket.getFlight().getId())
