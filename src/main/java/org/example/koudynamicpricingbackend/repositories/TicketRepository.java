@@ -15,6 +15,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Optional<Ticket> findByPnrAndPassenger(String pnr, Passenger passenger);
 
+    List<Ticket> findTicketsByPnrAndPassenger(String pnr, Passenger passenger);
+
+
     Optional<List<Ticket>> findAllByFlightOrderByIdAsc(Flight flight);
 
 }
