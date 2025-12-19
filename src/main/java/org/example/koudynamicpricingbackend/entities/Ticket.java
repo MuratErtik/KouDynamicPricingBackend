@@ -33,7 +33,7 @@ public class Ticket {
     private Passenger passenger;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_id", nullable = false) // unique = true SAKIN koyma
+    @JoinColumn(name = "seat_id", nullable = false)
     private Seat seat;
 
     @Column(nullable = false)
