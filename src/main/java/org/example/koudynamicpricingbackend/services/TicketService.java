@@ -14,13 +14,11 @@ import org.example.koudynamicpricingbackend.exceptions.FlightException;
 import org.example.koudynamicpricingbackend.exceptions.PassengerException;
 import org.example.koudynamicpricingbackend.exceptions.SeatException;
 import org.example.koudynamicpricingbackend.repositories.*;
+import org.example.koudynamicpricingbackend.requests.CancelTicketRequest;
 import org.example.koudynamicpricingbackend.requests.CreateBookingRequest;
 import org.example.koudynamicpricingbackend.requests.PassengerRequest;
 import org.example.koudynamicpricingbackend.requests.SearchWithPnrNumberRequest;
-import org.example.koudynamicpricingbackend.responses.BuyTicketResponse;
-import org.example.koudynamicpricingbackend.responses.EmailTicketResponse;
-import org.example.koudynamicpricingbackend.responses.PnrNumberResponse;
-import org.example.koudynamicpricingbackend.responses.TicketDetailResponse;
+import org.example.koudynamicpricingbackend.responses.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +28,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -154,9 +153,9 @@ public class TicketService {
                     createBookingRequest.getContactEmail(),
                     contactName,
                     pnrCode,
-                    outboundFlight, // Gidiş Uçuşu
-                    returnFlight,   // Dönüş Uçuşu (Yoksa null gider, sorun değil)
-                    emailTicketList, // <--- ARTIK HATA VERMEZ
+                    outboundFlight,
+                    returnFlight,
+                    emailTicketList,
                     totalAmount
             );
         }
@@ -168,7 +167,7 @@ public class TicketService {
                 .departureTime(outboundFlight.getDepartureTime())
                 .arrivalTime(outboundFlight.getArrivalTime())
                 .totalPrice(totalAmount)
-                .passengerCount(allCreatedTickets.size()) // Toplam bilet sayısı
+                .passengerCount(allCreatedTickets.size())
                 .tickets(detailDtos)
                 .build();
     }
@@ -203,13 +202,11 @@ public class TicketService {
                     .findFirst()
                     .orElseThrow(() -> new SeatException("Seat mismatch logic error."));
 
-            // 2. Yolcuyu Bul veya Oluştur
             String hashedIdentity = hashUtil.hashIdentityNumber(pReq.getIdentityNumber());
 
             Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity)
                     .orElseGet(() -> Passenger.builder().identityNumber(hashedIdentity).build());
 
-            // Bilgileri her zaman güncelle
             passenger.setFirstName(pReq.getFirstName());
             passenger.setLastName(pReq.getLastName());
             passenger.setEmail(pReq.getEmail());
@@ -217,19 +214,15 @@ public class TicketService {
             passenger.setBirthDate(pReq.getBirthDate());
             passengerRepository.save(passenger);
 
-            // 3. Koltuğu Güncelle
-            seat.setStatus(SeatStatus.BOOKED); // veya SOLD
+            seat.setStatus(SeatStatus.BOOKED);
             seatRepository.save(seat);
 
-            // 4. Fiyatı Hesapla (İndirimli mi?)
-            // flightService.discountForRoundTrip metodunun var olduğunu varsayıyorum.
-            // Yoksa: flight.getCurrentPrice().multiply(isRoundTrip ? BigDecimal.valueOf(0.9) : BigDecimal.ONE);
+
             BigDecimal finalPrice = flightService.discountForRoundTrip(flight.getCurrentPrice(), isRoundTrip);
             if (finalPrice==null) {
                 finalPrice=flight.getCurrentPrice();
             }
 
-            // 5. Bileti Kaydet
             Ticket ticket = Ticket.builder()
                     .pnr(pnrCode)
                     .flight(flight)
@@ -240,12 +233,10 @@ public class TicketService {
                     .build();
             ticketRepository.save(ticket);
 
-            // 6. Uçuş Kapasitesini Düşür
             flight.setRemainingSeats(flight.getRemainingSeats() - 1);
             tickets.add(ticket);
         }
 
-        // E. Uçuşu Kaydet ve Fiyat Motorunu Tetikle
         flightRepository.save(flight);
         dynamicPricingService.updatePriceForFlight(flight.getId(), "Ticket Sold");
 
@@ -301,5 +292,70 @@ public class TicketService {
                 .seatNumber(ticket.getSeat().getSeatNumber())
                 .soldPrice(ticket.getSoldPrice())
                 .build();
+    }
+
+    @Transactional
+    public CancelTicketResponse cancelTicket(@Valid CancelTicketRequest request) {
+
+        String hashedIdentity = hashUtil.hashIdentityNumber(request.getIdentityNumber());
+        Passenger passenger = passengerRepository.findByIdentityNumber(hashedIdentity).orElseThrow(
+                () -> new PassengerException("Passenger not found with identity number -> " + request.getIdentityNumber()));
+
+
+        List<Ticket> tickets = ticketRepository.findTicketsByPnrAndPassenger(request.getPnr(), passenger);
+
+        if (tickets.isEmpty()) {
+            throw new SeatException("Tickets not found with PNR number: " + request.getPnr());
+        }
+
+        BigDecimal totalRefund = BigDecimal.ZERO;
+        boolean anyActionTaken = false;
+
+        for (Ticket ticket : tickets) {
+
+            if (ticket.isCancelled()) continue;
+
+            Flight flight = ticket.getFlight();
+
+            long hoursUntilFlight = java.time.Duration.between(LocalDateTime.now(), flight.getDepartureTime()).toHours();
+            if (hoursUntilFlight < 6) {
+                throw new FlightException("Cannot cancel ticket. Less than 6 hours left to flight: " + flight.getFlightNumber());
+            }
+
+            Seat seat = ticket.getSeat();
+            seat.setStatus(SeatStatus.AVAILABLE);
+            seatRepository.save(seat);
+
+            flight.setRemainingSeats(flight.getRemainingSeats() + 1);
+            flightRepository.save(flight);
+
+            ticket.setCancelled(true);
+            ticketRepository.save(ticket);
+
+            dynamicPricingService.updatePriceForFlight(flight.getId(), "Ticket Cancelled");
+
+            totalRefund = totalRefund.add(ticket.getSoldPrice());
+            anyActionTaken = true;
+        }
+
+        if (!anyActionTaken) {
+            throw new FlightException("All tickets under this PNR are already cancelled.");
+        }
+
+        String contactEmail = tickets.get(0).getPassenger().getEmail();
+        String contactName = tickets.get(0).getPassenger().getFirstName();
+
+        emailService.sendCancellationEmail(
+                contactEmail,
+                contactName,
+                request.getPnr(),
+                totalRefund
+        );
+
+        CancelTicketResponse response = new CancelTicketResponse();
+        response.setPnr(request.getPnr());
+        response.setMessage("Ticket(s) cancelled successfully. Refund amount: " + totalRefund);
+
+        return response;
     }
 }
