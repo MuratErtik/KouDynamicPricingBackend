@@ -1,6 +1,7 @@
 package org.example.koudynamicpricingbackend.responses;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -22,6 +23,9 @@ public class CustomersFromFlightResponse {
     private BigDecimal soldPrice;
 
     private LocalDateTime purchaseDate;
+
+    @JsonProperty("isCancelled")
+    private boolean isCancelled;
 
 
 }
