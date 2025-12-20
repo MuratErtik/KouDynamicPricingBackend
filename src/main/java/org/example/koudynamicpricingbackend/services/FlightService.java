@@ -366,6 +366,7 @@ public class FlightService {
         response.setSeat(mapToSeatResponseForTicket(ticket));
         response.setSoldPrice(ticket.getSoldPrice());
         response.setPurchaseDate(ticket.getPurchaseDate());
+        response.setCancelled(ticket.isCancelled());
         return response;
 
     }
