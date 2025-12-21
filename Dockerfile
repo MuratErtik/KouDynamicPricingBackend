@@ -13,6 +13,8 @@ WORKDIR /app
 
 ENV TZ=Europe/Istanbul
 
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 COPY --from=build /app/target/*.jar app.jar
 
 ENV SERVER_PORT=8080
