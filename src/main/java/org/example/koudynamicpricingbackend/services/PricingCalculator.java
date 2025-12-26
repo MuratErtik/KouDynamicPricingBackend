@@ -54,40 +54,63 @@ public class PricingCalculator {
     public double calculateDayScore(LocalDateTime departureTime) {
         DayOfWeek day = departureTime.getDayOfWeek();
 
+        // HIGH DEMAND: (weekend peak)
         if (day == DayOfWeek.FRIDAY || day == DayOfWeek.SUNDAY) {
-            return 1.0;
+            return 0.90; // Maksimum talep
         }
 
-        //for business flights
-        if (day == DayOfWeek.MONDAY) {
-            return 0.8;
+        // MEDIUM-HIGH DEMAND: (weekend travel)
+        if (day == DayOfWeek.SATURDAY) {
+            return 0.75;
         }
 
-        // mid demand
-        if (day == DayOfWeek.SATURDAY || day == DayOfWeek.THURSDAY) {
-            return 0.5;
+        // MEDIUM DEMAND
+        if (day == DayOfWeek.MONDAY || day == DayOfWeek.THURSDAY) {
+            return 0.55; // mid-level
         }
 
-        // low demand
-        return 0.2;
+        // LOW DEMAND
+        if (day == DayOfWeek.TUESDAY || day == DayOfWeek.WEDNESDAY) {
+            return 0.20; // min demand
+        }
+
+        return 0.50; // Fallback
     }
 
     /**
-     * FIFTH INPUT: Time Score
+     * REVISED: Time Score with MORE AGGRESSIVE pricing differences
      * FCL EXPECTATION: 0.0 (Low hours) - 1.0 (Busy hours)
      */
     public double calculateTimeScore(LocalDateTime departureTime) {
         int hour = departureTime.getHour();
 
-        if (hour >= 6 && hour <= 9) return 1.0;
+        // PRIME PEAK HOURS (07-09 ve 17-19)
+        if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+            return 1.0;
+        }
 
-        if (hour >= 16 && hour <= 19) return 1.0;
+        // SECONDARY PEAK (06:00, 10:00, 16:00, 20:00)
+        if (hour == 6 || hour == 10 || hour == 16 || hour == 20) {
+            return 0.85;
+        }
 
-        if (hour >= 10 && hour <= 15) return 0.6;
+        // BUSINESS HOURS (11-15): normal level
+        if (hour >= 11 && hour <= 15) {
+            return 0.60;
+        }
 
-        if (hour >= 20 && hour <= 23) return 0.4;
+        // EVENING (21-22)
+        if (hour >= 21 && hour <= 22) {
+            return 0.35;
+        }
 
-        return 0.1;
+        // LATE NIGHT (23-01)
+        if (hour == 23 || hour == 0 || hour == 1) {
+            return 0.15;
+        }
+
+        // DEEP NIGHT (02-05):
+        return 0.05;
     }
 
 
