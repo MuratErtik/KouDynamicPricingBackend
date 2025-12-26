@@ -44,6 +44,7 @@ public class DynamicPricingService {
         double dayScore = pricingCalculator.calculateDayScore(flight.getDepartureTime());
         double timeScore = pricingCalculator.calculateTimeScore(flight.getDepartureTime());
 
+        // Debug Logs
         System.out.println("-------------------------0-------------------------------------");
         System.out.println("daysLeft: " + daysLeft);
         System.out.println("occupancyRate: " + occupancyRate);
@@ -52,23 +53,36 @@ public class DynamicPricingService {
         System.out.println("timeScore: " + timeScore);
         System.out.println("-------------------------0-------------------------------------");
 
-
+        // 2. Fuzzy Logic Calculator
         double multiplier = fuzzyInferenceService.calculatePriceFactor(
                 daysLeft, occupancyRate, seasonality, dayScore, timeScore
         );
 
+        System.out.println("Fuzzy Result -> " + multiplier);
 
+        // 3. price calculator
         BigDecimal oldPrice = flight.getCurrentPrice();
         if (oldPrice == null) {
             oldPrice = flight.getBasePrice();
         }
-        BigDecimal newPrice = flight.getBasePrice().multiply(BigDecimal.valueOf(multiplier)); // can change !!!!!!
 
-        //if price does not change dont log it (prevent from unnecessary logs)
-        if (oldPrice.compareTo(newPrice) == 0) {
+        //  calculate new price
+        BigDecimal newPrice = flight.getBasePrice().multiply(BigDecimal.valueOf(multiplier));
+
+
+
+
+        boolean isPriceSame = oldPrice.compareTo(newPrice) == 0;
+
+
+        boolean isInitial = "Initial Calculation (Create)".equals(triggerReason);
+
+        if (isPriceSame && !isInitial) {
             return;
         }
+        // -------------------------------
 
+        // 4. update and save
         flight.setCurrentPrice(newPrice);
         flightRepository.save(flight);
 
