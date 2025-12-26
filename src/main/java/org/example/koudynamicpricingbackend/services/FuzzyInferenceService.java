@@ -33,22 +33,24 @@ public class FuzzyInferenceService {
 
             fis.setVariable("daysToDeparture", daysLeft);
             fis.setVariable("occupancyRate", occupancyRate);
-            fis.setVariable("seasonality", seasonality);
+//          fis.setVariable("seasonality", seasonality);
             fis.setVariable("dayScore", dayScore);
             fis.setVariable("timeScore", timeScore);
 
             fis.evaluate();
 
-            double result = fis.getVariable("priceFactor").getValue();
+            double demandFactor = fis.getVariable("priceFactor").getValue();
 
-            if (Double.isNaN(result) || result <= 0) {
+            if (Double.isNaN(demandFactor) || demandFactor <= 0) {
                 return 1.0;
             }
 
-            // Debug Log
-             System.out.println("Fuzzy Result -> " + result);
+            double finalMultiplier = demandFactor * seasonality;
 
-            return result;
+            // Debug Log
+             System.out.println("Fuzzy Result -> " + finalMultiplier);
+
+            return finalMultiplier;
 
         } catch (Exception e) {
             e.printStackTrace();
