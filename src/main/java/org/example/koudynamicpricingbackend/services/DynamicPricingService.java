@@ -45,13 +45,13 @@ public class DynamicPricingService {
         double timeScore = pricingCalculator.calculateTimeScore(flight.getDepartureTime());
 
         // Debug Logs
-        System.out.println("-------------------------0-------------------------------------");
-        System.out.println("daysLeft: " + daysLeft);
-        System.out.println("occupancyRate: " + occupancyRate);
-        System.out.println("seasonality: " + seasonality);
-        System.out.println("dayScore: " + dayScore);
-        System.out.println("timeScore: " + timeScore);
-        System.out.println("-------------------------0-------------------------------------");
+//        System.out.println("-------------------------0-------------------------------------");
+//        System.out.println("daysLeft: " + daysLeft);
+//        System.out.println("occupancyRate: " + occupancyRate);
+//        System.out.println("seasonality: " + seasonality);
+//        System.out.println("dayScore: " + dayScore);
+//        System.out.println("timeScore: " + timeScore);
+//        System.out.println("-------------------------0-------------------------------------");
 
         // 2. Fuzzy Logic Calculator
         double multiplier = fuzzyInferenceService.calculatePriceFactor(
@@ -81,6 +81,17 @@ public class DynamicPricingService {
             return;
         }
         // -------------------------------
+
+        System.out.println("=== DEBUG INFO ===");
+        System.out.println("Flight: " + flight.getFlightNumber());
+        System.out.println("Departure: " + flight.getDepartureTime());
+        System.out.println("Days Left: " + daysLeft);
+        System.out.println("Occupancy Rate: " + occupancyRate);
+        System.out.println("Day Score: " + dayScore);
+        System.out.println("Time Score: " + timeScore);
+        System.out.println("Price Factor: " + multiplier);
+        System.out.println("Final Price: " + newPrice);
+        System.out.println("==================");
 
         // 4. update and save
         flight.setCurrentPrice(newPrice);
