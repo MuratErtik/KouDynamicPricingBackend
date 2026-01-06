@@ -27,9 +27,9 @@ FUZZIFY occupancyRate
 END_FUZZIFY
 
 FUZZIFY dayScore
-    TERM low_demand    := (0.0,1) (0.20,1) (0.35,0);    // Daha dar (0.20 için %100)
-    TERM medium_demand := (0.30,0) (0.55,1) (0.75,0);   // Orta alanda
-    TERM high_demand   := (0.70,0) (0.85,1) (1.0,1);    // Daha yüksek başlangıç
+    TERM low_demand    := (0.0,1) (0.20,1) (0.35,0);
+    TERM medium_demand := (0.30,0) (0.55,1) (0.75,0);
+    TERM high_demand   := (0.70,0) (0.85,1) (1.0,1);
 END_FUZZIFY
 
 FUZZIFY timeScore
@@ -42,12 +42,12 @@ FUZZIFY timeScore
 END_FUZZIFY
 
 DEFUZZIFY priceFactor
-    TERM veryLow  := (0.85,0) (0.90,1) (0.94,0);   // 0.85-0.94 (15-6% indirim)
-    TERM low      := (0.90,0) (0.94,1) (0.98,0);   // 0.90-0.98 (10-2% indirim)
-    TERM moderate := (0.95,0) (1.00,1) (1.05,0);   // 0.95-1.05 (±5%)
-    TERM high     := (1.02,0) (1.08,1) (1.14,0);   // 1.02-1.14 (2-14% artış)
-    TERM veryHigh := (1.10,0) (1.18,1) (1.26,0);   // 1.10-1.26 (10-26% artış)
-    TERM extreme  := (1.20,0) (1.32,1) (1.50,1);   // 1.20-1.50 (20-50% artış)
+    TERM veryLow  := (0.70,0) (0.80,1) (0.88,0);
+    TERM low      := (0.85,0) (0.92,1) (0.98,0);
+    TERM moderate := (0.95,0) (1.00,1) (1.08,0);
+    TERM high     := (1.05,0) (1.20,1) (1.35,0);
+    TERM veryHigh := (1.30,0) (1.55,1) (1.80,0);
+    TERM extreme  := (1.70,0) (2.20,1) (3.00,1);
 
     METHOD : COG;
     DEFAULT := 1.0;
@@ -59,10 +59,9 @@ RULEBLOCK PricingRules
     ACCU : MAX;
 
     // ==========================================
-    // PRIORITY 1: TIME-BASED (Daha agresif)
+    // PRIORITY 1: TIME-BASED
     // ==========================================
 
-    // DEEP NIGHT (02-05) - Maksimum indirim
     RULE 1: IF timeScore IS deep_night
             THEN priceFactor IS veryLow;
 
@@ -72,7 +71,6 @@ RULEBLOCK PricingRules
     RULE 3: IF timeScore IS deep_night AND occupancyRate IS high
             THEN priceFactor IS low;
 
-    // LATE NIGHT (23-01) - Ciddi indirim
     RULE 4: IF timeScore IS late_night
             THEN priceFactor IS veryLow;
 
@@ -82,28 +80,24 @@ RULEBLOCK PricingRules
     RULE 6: IF timeScore IS late_night AND occupancyRate IS high
             THEN priceFactor IS moderate;
 
-    // EVENING (21-22) - Indirim
     RULE 7: IF timeScore IS evening
             THEN priceFactor IS low;
 
     RULE 8: IF timeScore IS evening AND occupancyRate IS high
             THEN priceFactor IS moderate;
 
-    // BUSINESS (11-15) - Normal
     RULE 9: IF timeScore IS business
             THEN priceFactor IS moderate;
 
     RULE 10: IF timeScore IS business AND occupancyRate IS high
              THEN priceFactor IS high;
 
-    // NEAR PEAK (06, 10, 16, 20) - Yüksek
     RULE 11: IF timeScore IS near_peak
              THEN priceFactor IS high;
 
     RULE 12: IF timeScore IS near_peak AND occupancyRate IS high
              THEN priceFactor IS veryHigh;
 
-    // PRIME PEAK (07-09, 17-19) - Maksimum
     RULE 13: IF timeScore IS prime_peak
              THEN priceFactor IS high;
 
@@ -114,10 +108,9 @@ RULEBLOCK PricingRules
              THEN priceFactor IS veryHigh;
 
     // ==========================================
-    // PRIORITY 2: DAY-BASED (Daha agresif)
+    // PRIORITY 2: DAY-BASED
     // ==========================================
 
-    // LOW DEMAND DAYS (Salı, Çarşamba) - Ciddi indirim
     RULE 16: IF dayScore IS low_demand
              THEN priceFactor IS low;
 
@@ -127,14 +120,12 @@ RULEBLOCK PricingRules
     RULE 18: IF dayScore IS low_demand AND occupancyRate IS high
              THEN priceFactor IS moderate;
 
-    // MEDIUM DEMAND DAYS (Pazartesi, Perşembe, Cumartesi) - Normal
     RULE 19: IF dayScore IS medium_demand
              THEN priceFactor IS moderate;
 
     RULE 20: IF dayScore IS medium_demand AND occupancyRate IS high
              THEN priceFactor IS high;
 
-    // HIGH DEMAND DAYS (Cuma, Pazar) - Premium
     RULE 21: IF dayScore IS high_demand
              THEN priceFactor IS high;
 
@@ -147,85 +138,89 @@ RULEBLOCK PricingRules
     RULE 24: IF dayScore IS high_demand AND timeScore IS prime_peak
              THEN priceFactor IS extreme;
 
-    // [GERİ KALAN 21 KURALI AYNI BIRAKIN: RULE 25-45]
-
     // ==========================================
-    // PRIORITY 3: DAYS TO DEPARTURE
+    // PRIORITY 3: DAYS TO DEPARTURE (ÇOK GÜÇLÜ!)
     // ==========================================
 
+    // SON DAKİKA (0-3 gün) - EXTREME ARTIŞLAR
     RULE 25: IF daysToDeparture IS veryShort AND occupancyRate IS critical
              THEN priceFactor IS extreme;
 
     RULE 26: IF daysToDeparture IS veryShort AND occupancyRate IS high
-             THEN priceFactor IS veryHigh;
+             THEN priceFactor IS extreme;
 
     RULE 27: IF daysToDeparture IS veryShort AND occupancyRate IS medium
-             THEN priceFactor IS high;
-
-    RULE 28: IF daysToDeparture IS short AND occupancyRate IS critical
-             THEN priceFactor IS extreme;
-
-    RULE 29: IF daysToDeparture IS short AND occupancyRate IS high
-             THEN priceFactor IS high;
-
-    RULE 30: IF daysToDeparture IS short AND occupancyRate IS medium
-             THEN priceFactor IS moderate;
-
-    RULE 31: IF daysToDeparture IS medium AND occupancyRate IS critical
              THEN priceFactor IS veryHigh;
 
-    RULE 32: IF daysToDeparture IS medium AND occupancyRate IS high
+    RULE 28: IF daysToDeparture IS veryShort AND occupancyRate IS low
+             THEN priceFactor IS veryHigh;
+
+    // KISA VADE (1-15 gün) - YÜKSEK ARTIŞLAR
+    RULE 29: IF daysToDeparture IS short AND occupancyRate IS critical
+             THEN priceFactor IS extreme;
+
+    RULE 30: IF daysToDeparture IS short AND occupancyRate IS high
+             THEN priceFactor IS veryHigh;
+
+    RULE 31: IF daysToDeparture IS short AND occupancyRate IS medium
              THEN priceFactor IS high;
 
-    RULE 33: IF daysToDeparture IS medium AND occupancyRate IS medium
+    RULE 32: IF daysToDeparture IS short AND occupancyRate IS low
              THEN priceFactor IS moderate;
 
-    RULE 34: IF daysToDeparture IS earlyLong
+    // ORTA VADE (10-60 gün) - ORTA ARTIŞLAR
+    RULE 33: IF daysToDeparture IS medium AND occupancyRate IS critical
+             THEN priceFactor IS veryHigh;
+
+    RULE 34: IF daysToDeparture IS medium AND occupancyRate IS high
+             THEN priceFactor IS high;
+
+    RULE 35: IF daysToDeparture IS medium AND occupancyRate IS medium
+             THEN priceFactor IS moderate;
+
+    RULE 36: IF daysToDeparture IS medium AND occupancyRate IS low
              THEN priceFactor IS low;
 
-    RULE 35: IF daysToDeparture IS farLong
+    // ERKEN (45-105 gün) - HAFIF İNDİRİM
+    RULE 37: IF daysToDeparture IS earlyLong AND occupancyRate IS high
+             THEN priceFactor IS moderate;
+
+    RULE 38: IF daysToDeparture IS earlyLong
+             THEN priceFactor IS low;
+
+    // ÇOK ERKEN (90-180 gün) - MAX İNDİRİM
+    RULE 39: IF daysToDeparture IS farLong
              THEN priceFactor IS veryLow;
 
     // ==========================================
-    // COMBO RULES: Özel Durumlar
+    // COMBO RULES (EXTREME DURUMLAR)
     // ==========================================
 
-    // En pahalı: Cuma/Pazar + Peak + Yüksek doluluk
-    RULE 36: IF dayScore IS high_demand AND timeScore IS prime_peak AND occupancyRate IS high
+    RULE 40: IF dayScore IS high_demand AND timeScore IS prime_peak AND occupancyRate IS high
              THEN priceFactor IS extreme;
 
-    RULE 37: IF dayScore IS high_demand AND timeScore IS prime_peak
+    RULE 41: IF dayScore IS high_demand AND timeScore IS prime_peak
              THEN priceFactor IS veryHigh;
 
-    // En ucuz: Salı/Çarşamba + Gece
-    RULE 38: IF dayScore IS low_demand AND timeScore IS deep_night
+    RULE 42: IF dayScore IS low_demand AND timeScore IS deep_night
              THEN priceFactor IS veryLow;
 
-    RULE 39: IF dayScore IS low_demand AND timeScore IS late_night
+    RULE 43: IF dayScore IS low_demand AND timeScore IS late_night
              THEN priceFactor IS veryLow;
 
-    // Son dakika + gece = moderate indirim
-    RULE 40: IF daysToDeparture IS veryShort AND timeScore IS deep_night
-             THEN priceFactor IS moderate;
+    RULE 44: IF daysToDeparture IS veryShort AND timeScore IS prime_peak
+             THEN priceFactor IS extreme;
 
-    // Son dakika + peak = extra pahalı
-    RULE 41: IF daysToDeparture IS veryShort AND timeScore IS prime_peak
+    RULE 45: IF dayScore IS high_demand AND timeScore IS near_peak AND occupancyRate IS high
              THEN priceFactor IS veryHigh;
 
-    // Hafta sonu + peak kombinasyonu
-    RULE 42: IF dayScore IS high_demand AND timeScore IS near_peak AND occupancyRate IS high
-             THEN priceFactor IS veryHigh;
-
-    // Hafta içi + gece kombinasyonu
-    RULE 43: IF dayScore IS low_demand AND timeScore IS evening
+    RULE 46: IF dayScore IS low_demand AND timeScore IS evening
              THEN priceFactor IS low;
 
-    // Orta gün + business saat
-    RULE 44: IF dayScore IS medium_demand AND timeScore IS business
+    RULE 47: IF dayScore IS medium_demand AND timeScore IS business
              THEN priceFactor IS moderate;
 
-    // Pazartesi sabahı business flight
-    RULE 45: IF dayScore IS medium_demand AND timeScore IS prime_peak AND occupancyRate IS high
+    RULE 48: IF dayScore IS medium_demand AND timeScore IS prime_peak AND occupancyRate IS high
              THEN priceFactor IS veryHigh;
 
 END_RULEBLOCK
