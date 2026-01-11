@@ -37,7 +37,7 @@ Standard systems use simple rules (if-else). This project uses **Fuzzy Logic (.f
 | Technology | Usage |
 | :--- | :--- |
 | **Java 17+** | Main Programming Language |
-| **Spring Boot 3** | Backend Framework (Web, Data JPA) |
+| **Spring Boot 4** | Backend Framework (Web, Data JPA) |
 | **PostgreSQL** | Database |
 | **jFuzzyLogic** | Library for Fuzzy Logic calculations |
 | **Hibernate / JPA** | Database connection and management |
