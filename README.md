@@ -1,6 +1,6 @@
 # ✈️ KOU Airlines - Dynamic Pricing Backend
 
-![Java](https://img.shields.io/badge/Java-17%2B-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![Fuzzy Logic](https://img.shields.io/badge/AI-Fuzzy%20Logic-purple)
+![Java](https://img.shields.io/badge/Java-17%2B-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-green) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![Fuzzy Logic](https://img.shields.io/badge/AI-Fuzzy%20Logic-purple)
 
 **KOU Airlines Backend** is a reservation system for an airline company. It is built with **Spring Boot** and **PostgreSQL**.
 
